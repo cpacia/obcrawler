@@ -131,7 +131,7 @@ func (c *Crawler) crawlNode(nd Node) {
 		}
 		nd.peerInfo = pi
 	}
-	if nd.userAgent == "" {
+	if nd.userAgent == "" || nd.lastConnect.Add(time.Hour*48).Before(time.Now()){
 		ua, err := c.client.UserAgent(nd.peerInfo.ID)
 		if err != nil {
 			log.Errorf("Couldn't find user agent for peer %s\n", nd.peerInfo.ID.Pretty())
