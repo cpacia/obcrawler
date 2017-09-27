@@ -29,14 +29,15 @@ func (a *APIServer) handlePeers(w http.ResponseWriter, r *http.Request) {
 	only := r.URL.Query().Get("only")
 	var peers []string
 	for peer, nd := range a.crawler.theList {
+		if len(nd.peerInfo.Addrs) == 0 {
+			continue
+		}
 		if only == "" {
 			peers = append(peers, peer)
 			continue
 		}
-		nodeType, err := GetNodeType(nd.peerInfo.Addrs)
-		if err != nil {
-			continue
-		}
+		nodeType := GetNodeType(nd.peerInfo.Addrs)
+
 		switch {
 		case only == "tor" && nodeType == TorOnly:
 			peers = append(peers, peer)
@@ -72,6 +73,9 @@ func (a *APIServer) handleCount(w http.ResponseWriter, r *http.Request) {
 	}
 	count := 0
 	for _, nd := range a.crawler.theList {
+		if len(nd.peerInfo.Addrs) == 0 {
+			continue
+		}
 		if lastActive != "" && nd.lastConnect.Add(d).Before(time.Now()) {
 			continue
 		}
@@ -79,10 +83,8 @@ func (a *APIServer) handleCount(w http.ResponseWriter, r *http.Request) {
 			count++
 			continue
 		}
-		nodeType, err := GetNodeType(nd.peerInfo.Addrs)
-		if err != nil {
-			continue
-		}
+		nodeType := GetNodeType(nd.peerInfo.Addrs)
+
 		switch {
 		case only == "tor" && nodeType == TorOnly:
 			count++

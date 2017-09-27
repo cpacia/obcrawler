@@ -18,8 +18,8 @@ type Start struct {
 	GatewayAddr    string   `short:"g" long:"gatewayaddr" description:"the address of the openbazaar-go gateway" default:"127.0.0.1:4002"`
 	APIServerAddr  string   `short:"a" long:"apiaddr" description:"the address to bind the API server to" default:":8080"`
 	CrawlDelay     int      `short:"c" long:"crawldelay" description:"time between crawls in seconds" default:"22"`
-	NodeDelay      int      `short:"n" long:"nodedelay" description:"how long to wait before crawling a node again in seconds" default:"1800"`
-	MaxConcurrency int      `short:"m" long:"maxconcurrency" description:"maximum number of nodes to crawl at one time" default:"8"`
+	NodeDelay      int      `short:"n" long:"nodedelay" description:"how long to wait before crawling a node again in seconds" default:"5400"`
+	MaxConcurrency int      `short:"m" long:"maxconcurrency" description:"maximum number of nodes to crawl at one time" default:"20"`
 	CrawlListings  bool     `short:"l" long:"crawllistings" description:"crawl each node's listings"`
 }
 

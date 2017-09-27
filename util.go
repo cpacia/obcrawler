@@ -2,7 +2,6 @@ package main
 
 import (
 	"gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
-	"errors"
 )
 
 type NodeType int
@@ -13,10 +12,7 @@ const (
 	DualStack
 )
 
-func GetNodeType(addrs []multiaddr.Multiaddr) (NodeType, error) {
-	if len(addrs) == 0 {
-		return Clearnet, errors.New("No addrs provided")
-	}
+func GetNodeType(addrs []multiaddr.Multiaddr) NodeType {
 	usingTor := false
 	usingClearnet := false
 	for _, addr := range addrs {
@@ -34,12 +30,12 @@ func GetNodeType(addrs []multiaddr.Multiaddr) (NodeType, error) {
 	}
 	switch {
 	case usingClearnet && !usingTor:
-		return Clearnet, nil
+		return Clearnet
 	case usingTor && !usingClearnet:
-		return TorOnly, nil
+		return TorOnly
 	case usingTor && usingClearnet:
-		return DualStack, nil
+		return DualStack
 	default:
-		return Clearnet, errors.New("Error parsing addrs")
+		return Clearnet
 	}
 }

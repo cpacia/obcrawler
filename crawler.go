@@ -119,9 +119,18 @@ func (c *Crawler) crawlNodes() {
 		go c.crawlNode(nd)
 		started++
 	}
+	if started == 0 {
+		log.Info("Idling...")
+	}
 }
 
 func (c *Crawler) crawlNode(nd Node) {
+	defer func() {
+		nd.lastTry = time.Now()
+		c.lock.Lock()
+		defer c.lock.Unlock()
+		c.theList[nd.peerInfo.ID.Pretty()] = nd
+	}()
 	log.Debugf("Crawling %s\n", nd.peerInfo.ID.Pretty())
 	if len(nd.peerInfo.Addrs) == 0 {
 		pi, err := c.client.PeerInfo(nd.peerInfo.ID)
@@ -139,18 +148,18 @@ func (c *Crawler) crawlNode(nd Node) {
 		}
 		nd.userAgent = ua
 	}
-	online, err := c.client.Ping(nd.peerInfo.ID)
+	/*online, err := c.client.Ping(nd.peerInfo.ID)
 	if err != nil {
 		log.Errorf("Error pinging peer %s\n", nd.peerInfo.ID.Pretty())
 		return
 	}
 	if online {
 		nd.lastConnect = time.Now()
-	}
+	}*/
 
 	closer, err := c.client.ClosestPeers(nd.peerInfo.ID)
 	if err != nil {
-		log.Errorf("Error looking up closest peers to peer %s\n", nd.peerInfo.ID.Pretty())
+		log.Error("Error looking up closest peers")
 		return
 	}
 	for _, p := range closer {
@@ -165,7 +174,4 @@ func (c *Crawler) crawlNode(nd Node) {
 	if c.crawlListings {
 		// TODO
 	}
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.theList[nd.peerInfo.ID.Pretty()] = nd
 }

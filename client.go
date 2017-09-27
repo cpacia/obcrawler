@@ -16,7 +16,7 @@ type OBClient struct {
 }
 
 func NewOBClient(addr string) *OBClient {
-	client := http.Client{Timeout: time.Minute * 2}
+	client := http.Client{Timeout: time.Minute * 3}
 	return &OBClient{client, addr}
 }
 
@@ -73,13 +73,14 @@ func (c *OBClient) PeerInfo(peerID peer.ID) (ps.PeerInfo, error) {
 	if err != nil {
 		return pi, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return pi, errors.New("Not found")
-	}
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return pi, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return pi, errors.New(string(b))
 	}
 
 	err = pi.UnmarshalJSON(b)
