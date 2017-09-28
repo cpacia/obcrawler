@@ -17,7 +17,7 @@ type CrawlerConfig struct {
 }
 
 type Crawler struct {
-	theList        map[string]Node
+	theList        map[string]*Node
 	client         *OBClient
 	crawlListings  bool
 	crawlDelay     time.Duration
@@ -32,7 +32,7 @@ func NewCrawler(config CrawlerConfig) *Crawler {
 		crawlListings:  config.crawlListings,
 		crawlDelay:     config.crawlDelay,
 		nodeDelay:      config.nodeDelay,
-		theList:        make(map[string]Node),
+		theList:        make(map[string]*Node),
 		maxConcurrency: config.maxConcurrency,
 		lock:           sync.RWMutex{},
 	}
@@ -68,7 +68,7 @@ func (c *Crawler) runCrawler(ctx context.Context) {
 			c.lock.Lock()
 			defer c.lock.Unlock()
 			if _, ok := c.theList[pi.ID.Pretty()]; !ok {
-				c.theList[pi.ID.Pretty()] = n
+				c.theList[pi.ID.Pretty()] = &n
 				log.Debugf("Found new node: %s\n", pi.ID.Pretty())
 			}
 		}(p)
@@ -98,7 +98,7 @@ func (c *Crawler) crawlNodes() {
 	defer c.lock.RUnlock()
 
 	for _, nd := range c.theList {
-		if nd.crawlActive == true {
+		if nd.crawlActive {
 			continue
 		}
 
@@ -124,12 +124,10 @@ func (c *Crawler) crawlNodes() {
 	}
 }
 
-func (c *Crawler) crawlNode(nd Node) {
+func (c *Crawler) crawlNode(nd *Node) {
 	defer func() {
+		nd.crawlActive = false
 		nd.lastTry = time.Now()
-		c.lock.Lock()
-		defer c.lock.Unlock()
-		c.theList[nd.peerInfo.ID.Pretty()] = nd
 	}()
 	log.Debugf("Crawling %s\n", nd.peerInfo.ID.Pretty())
 	if len(nd.peerInfo.Addrs) == 0 {
@@ -167,7 +165,7 @@ func (c *Crawler) crawlNode(nd Node) {
 		_, ok := c.theList[p.Pretty()]
 		if !ok {
 			log.Debugf("Found new node: %s\n", p.Pretty())
-			c.theList[p.Pretty()] = Node{peerInfo: ps.PeerInfo{ID: p}}
+			c.theList[p.Pretty()] = &Node{peerInfo: ps.PeerInfo{ID: p}}
 		}
 		c.lock.Unlock()
 	}
