@@ -45,6 +45,7 @@ func (c *Crawler) runCrawler(ctx context.Context) {
 		log.Error(err)
 		return
 	}
+	go c.logStats()
 	var wg sync.WaitGroup
 	for _, p := range currentPeers {
 		wg.Add(1)
@@ -52,12 +53,12 @@ func (c *Crawler) runCrawler(ctx context.Context) {
 			defer wg.Done()
 			pi, err := c.client.PeerInfo(p)
 			if err != nil {
-				log.Errorf("Couldn't find addrs for peer %s\n", p.Pretty())
+				log.Warningf("Couldn't find addrs for peer %s\n", p.Pretty())
 				return
 			}
 			ua, err := c.client.UserAgent(p)
 			if err != nil {
-				log.Errorf("Couldn't find user agent for peer %s\n", p.Pretty())
+				log.Warningf("Couldn't find user agent for peer %s\n", p.Pretty())
 				return
 			}
 			n := Node{
@@ -133,7 +134,7 @@ func (c *Crawler) crawlNode(nd *Node) {
 	if len(nd.peerInfo.Addrs) == 0 {
 		pi, err := c.client.PeerInfo(nd.peerInfo.ID)
 		if err != nil {
-			log.Errorf("Couldn't find addrs for peer %s\n", nd.peerInfo.ID.Pretty())
+			log.Warningf("Couldn't find addrs for peer %s\n", nd.peerInfo.ID.Pretty())
 			return
 		}
 		nd.peerInfo = pi
@@ -141,25 +142,21 @@ func (c *Crawler) crawlNode(nd *Node) {
 	if nd.userAgent == "" || nd.lastConnect.Add(time.Hour*48).Before(time.Now()){
 		ua, err := c.client.UserAgent(nd.peerInfo.ID)
 		if err != nil {
-			log.Errorf("Couldn't find user agent for peer %s\n", nd.peerInfo.ID.Pretty())
+			log.Warningf("Couldn't find user agent for peer %s\n", nd.peerInfo.ID.Pretty())
 			return
 		}
 		nd.userAgent = ua
 	}
-	/*online, err := c.client.Ping(nd.peerInfo.ID)
+	online, err := c.client.Ping(nd.peerInfo.ID)
 	if err != nil {
 		log.Errorf("Error pinging peer %s\n", nd.peerInfo.ID.Pretty())
 		return
 	}
 	if online {
 		nd.lastConnect = time.Now()
-	}*/
-
-	closer, err := c.client.ClosestPeers(nd.peerInfo.ID)
-	if err != nil {
-		log.Error("Error looking up closest peers")
-		return
 	}
+
+	closer, _ := c.client.ClosestPeers(nd.peerInfo.ID)
 	for _, p := range closer {
 		c.lock.Lock()
 		_, ok := c.theList[p.Pretty()]
@@ -171,5 +168,35 @@ func (c *Crawler) crawlNode(nd *Node) {
 	}
 	if c.crawlListings {
 		// TODO
+	}
+}
+
+func (c *Crawler) logStats() {
+	t := time.NewTicker(time.Minute)
+	for range t.C {
+		c.lock.RLock()
+		total := len(c.theList)
+		totalWithIP := 0
+		totalTor := 0
+		totalDualStack := 0
+		totalClearnet := 0
+		for _, nd := range c.theList {
+			if len(nd.peerInfo.Addrs) > 0 {
+				totalWithIP++
+			} else {
+				continue
+			}
+			nodeType := GetNodeType(nd.peerInfo.Addrs)
+			switch {
+			case nodeType == TorOnly:
+				totalTor++
+			case nodeType == DualStack:
+				totalDualStack++
+			case nodeType == Clearnet:
+				totalClearnet++
+			}
+		}
+		log.Infof("Total PeerIDs: %d, Total with addrs: %d, Total Clearnet: %d, Total Tor: %d, Total Dualstack: %d\n", total, totalWithIP, totalClearnet, totalTor, totalDualStack)
+		c.lock.RUnlock()
 	}
 }

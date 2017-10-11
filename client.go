@@ -112,7 +112,7 @@ func (c *OBClient) Ping(peerID peer.ID) (bool, error) {
 		return false, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return false, errors.New("User agent found")
+		return false, errors.New("Ping error")
 	}
 	type status struct {
 		Status string `json:"status"`

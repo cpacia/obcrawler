@@ -98,8 +98,22 @@ func (a *APIServer) handleCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *APIServer) handleUserAgents(w http.ResponseWriter, r *http.Request) {
+	lastActive := r.URL.Query().Get("lastActive")
+	var d time.Duration
+	var err error
+	if lastActive != "" {
+		d, err = time.ParseDuration(lastActive)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
 	ua := make(map[string]int)
 	for _, nd := range a.crawler.theList {
+		if lastActive != "" && nd.lastConnect.Add(d).Before(time.Now()) {
+			continue
+		}
 		if nd.userAgent != "" {
 			count, ok := ua[nd.userAgent]
 			if !ok {
