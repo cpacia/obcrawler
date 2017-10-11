@@ -4,9 +4,27 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/blendlabs/go-exception",
+			"Rev": "04be78b9b2a71cf039fe86cef5221b3d3cb89fd7"
+		},
+		{
+			"ImportPath": "github.com/blendlabs/go-util",
+			"Rev": "77949c5361c9efd665120484a7aa39877468b87d"
+		},
+		{
 			"ImportPath": "github.com/boltdb/bolt",
 			"Comment": "v1.2.0-21-gd974993",
 			"Rev": "d97499360d1ecebc492ea66c7447ea948f417620"
+		},
+		{
+			"ImportPath": "github.com/golang/freetype/raster",
+			"Comment": "release-137-ge2365df",
+			"Rev": "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
+		},
+		{
+			"ImportPath": "github.com/golang/freetype/truetype",
+			"Comment": "release-137-ge2365df",
+			"Rev": "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
@@ -21,6 +39,52 @@
 			"ImportPath": "github.com/op/go-logging",
 			"Comment": "v1-7-g970db52",
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart/drawing",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart/matrix",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart/roboto",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart/seq",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "github.com/wcharczuk/go-chart/util",
+			"Comment": "v2.0-69-ga0ea012",
+			"Rev": "a0ea0129036c613675742b96f051df3a1a08821f"
+		},
+		{
+			"ImportPath": "golang.org/x/image/draw",
+			"Rev": "334384d9e19178a0488c9360d94d183c1ef0f711"
+		},
+		{
+			"ImportPath": "golang.org/x/image/font",
+			"Rev": "334384d9e19178a0488c9360d94d183c1ef0f711"
+		},
+		{
+			"ImportPath": "golang.org/x/image/math/f64",
+			"Rev": "334384d9e19178a0488c9360d94d183c1ef0f711"
+		},
+		{
+			"ImportPath": "golang.org/x/image/math/fixed",
+			"Rev": "334384d9e19178a0488c9360d94d183c1ef0f711"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
