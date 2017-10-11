@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"github.com/jessevdk/go-flags"
+	"github.com/mitchellh/go-homedir"
 	"github.com/op/go-logging"
 	"gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	"os"
 	"os/signal"
-	"time"
 	"path/filepath"
 	"runtime"
-	"github.com/mitchellh/go-homedir"
+	"time"
 )
 
 func init() {
@@ -25,6 +25,7 @@ type Start struct {
 	NodeDelay      int    `short:"n" long:"nodedelay" description:"how long to wait before crawling a node again in seconds" default:"5400"`
 	MaxConcurrency int    `short:"m" long:"maxconcurrency" description:"maximum number of nodes to crawl at one time" default:"20"`
 	CrawlListings  bool   `short:"l" long:"crawllistings" description:"crawl each node's listings"`
+	LogStats       bool   `short:"s" long:"logstats" description:"log stats to the database"`
 }
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -87,6 +88,11 @@ func (x *Start) Execute(args []string) error {
 	crawler := NewCrawler(config)
 	log.Notice("Starting crawler")
 	go crawler.runCrawler(ctx)
+
+	if x.LogStats {
+		sl := NewStatsLogger(db, crawler.GetNodes)
+		go sl.run()
+	}
 
 	server := NewAPIServer(x.APIServerAddr, crawler)
 	server.serve()

@@ -151,7 +151,7 @@ func (c *Crawler) crawlNode(nd *Node) {
 		nd.CrawlActive = false
 		nd.LastTry = time.Now()
 		if c.db != nil {
-			c.db.Put(*nd)
+			c.db.PutNode(*nd)
 		}
 	}()
 	log.Debugf("Crawling %s\n", nd.PeerInfo.ID.Pretty())
@@ -226,4 +226,15 @@ func (c *Crawler) logStats() {
 		log.Infof("Total PeerIDs: %d, Total with addrs: %d, Total Clearnet: %d, Total Tor: %d, Total Dualstack: %d\n", total, totalWithIP, totalClearnet, totalTor, totalDualStack)
 		c.lock.RUnlock()
 	}
+}
+
+func (c *Crawler) GetNodes() []Node {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	var nodes []Node
+	for _, nd := range c.theList {
+		nodes = append(nodes, *nd)
+	}
+	return nodes
 }

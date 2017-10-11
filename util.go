@@ -39,3 +39,17 @@ func GetNodeType(addrs []multiaddr.Multiaddr) NodeType {
 		return Clearnet
 	}
 }
+
+type timeSlice []Snapshot
+
+func (p timeSlice) Len() int {
+	return len(p)
+}
+
+func (p timeSlice) Less(i, j int) bool {
+	return p[i].Timestamp.Before(p[j].Timestamp)
+}
+
+func (p timeSlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
