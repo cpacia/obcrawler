@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	"errors"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
+	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"io/ioutil"
 	"net/http"
 	"time"
-	"errors"
 )
 
 type OBClient struct {
@@ -91,7 +91,7 @@ func (c *OBClient) PeerInfo(peerID peer.ID) (ps.PeerInfo, error) {
 }
 
 func (c *OBClient) UserAgent(peerID peer.ID) (string, error) {
-	resp, err := c.httpClient.Get("http://" + c.addr + "/ipns/"+ peerID.Pretty() + "/user_agent")
+	resp, err := c.httpClient.Get("http://" + c.addr + "/ipns/" + peerID.Pretty() + "/user_agent")
 	if err != nil {
 		return "", err
 	}
@@ -107,7 +107,7 @@ func (c *OBClient) UserAgent(peerID peer.ID) (string, error) {
 }
 
 func (c *OBClient) Ping(peerID peer.ID) (bool, error) {
-	resp, err := c.httpClient.Get("http://" + c.addr + "/ob/status/"+ peerID.Pretty())
+	resp, err := c.httpClient.Get("http://" + c.addr + "/ob/status/" + peerID.Pretty())
 	if err != nil {
 		return false, err
 	}

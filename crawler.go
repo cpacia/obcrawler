@@ -14,6 +14,7 @@ type CrawlerConfig struct {
 	crawlDelay     time.Duration
 	nodeDelay      time.Duration
 	maxConcurrency int
+	db             Datastore
 }
 
 type Crawler struct {
@@ -24,6 +25,7 @@ type Crawler struct {
 	nodeDelay      time.Duration
 	maxConcurrency int
 	lock           sync.RWMutex
+	db             Datastore
 }
 
 func NewCrawler(config CrawlerConfig) *Crawler {
@@ -35,10 +37,24 @@ func NewCrawler(config CrawlerConfig) *Crawler {
 		theList:        make(map[string]*Node),
 		maxConcurrency: config.maxConcurrency,
 		lock:           sync.RWMutex{},
+		db:             config.db,
 	}
 }
 
 func (c *Crawler) runCrawler(ctx context.Context) {
+	// Load peers from database
+	nodes, err := c.db.GetAllNodes()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Noticef("Loaded %d nodes from database", len(nodes))
+	for _, node := range nodes {
+		n := node
+		c.theList[node.PeerInfo.ID.Pretty()] = &n
+	}
+
+	// Fetch current peers
 	log.Notice("Fetching connected peers")
 	currentPeers, err := c.client.Peers()
 	if err != nil {
@@ -51,26 +67,31 @@ func (c *Crawler) runCrawler(ctx context.Context) {
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
+			c.lock.RLock()
+			if _, ok := c.theList[p.Pretty()]; ok {
+				c.lock.RUnlock()
+				return
+			}
+			c.lock.RUnlock()
+
 			pi, err := c.client.PeerInfo(p)
 			if err != nil {
 				log.Warningf("Couldn't find addrs for peer %s\n", p.Pretty())
-				return
 			}
 			ua, err := c.client.UserAgent(p)
 			if err != nil {
 				log.Warningf("Couldn't find user agent for peer %s\n", p.Pretty())
-				return
 			}
 			n := Node{
-				peerInfo:    pi,
-				userAgent:   ua,
-				lastConnect: time.Now(),
+				PeerInfo:    pi,
+				UserAgent:   ua,
+				LastConnect: time.Now(),
 			}
 			c.lock.Lock()
 			defer c.lock.Unlock()
 			if _, ok := c.theList[pi.ID.Pretty()]; !ok {
-				c.theList[pi.ID.Pretty()] = &n
 				log.Debugf("Found new node: %s\n", pi.ID.Pretty())
+				c.theList[pi.ID.Pretty()] = &n
 			}
 		}(p)
 	}
@@ -99,7 +120,7 @@ func (c *Crawler) crawlNodes() {
 	defer c.lock.RUnlock()
 
 	for _, nd := range c.theList {
-		if nd.crawlActive {
+		if nd.CrawlActive {
 			continue
 		}
 
@@ -109,13 +130,13 @@ func (c *Crawler) crawlNodes() {
 		}
 
 		// Don't crawl a node to quickly
-		if nd.lastTry.Add(c.nodeDelay).After(time.Now()) {
+		if nd.LastTry.Add(c.nodeDelay).After(time.Now()) {
 			continue
 		}
 
 		// All looks good so start a go routine to crawl the remote node
-		nd.crawlActive = true
-		nd.crawlStart = time.Now()
+		nd.CrawlActive = true
+		nd.CrawlStart = time.Now()
 
 		go c.crawlNode(nd)
 		started++
@@ -127,42 +148,48 @@ func (c *Crawler) crawlNodes() {
 
 func (c *Crawler) crawlNode(nd *Node) {
 	defer func() {
-		nd.crawlActive = false
-		nd.lastTry = time.Now()
+		nd.CrawlActive = false
+		nd.LastTry = time.Now()
+		if c.db != nil {
+			c.db.Put(*nd)
+		}
 	}()
-	log.Debugf("Crawling %s\n", nd.peerInfo.ID.Pretty())
-	if len(nd.peerInfo.Addrs) == 0 {
-		pi, err := c.client.PeerInfo(nd.peerInfo.ID)
+	log.Debugf("Crawling %s\n", nd.PeerInfo.ID.Pretty())
+	if len(nd.PeerInfo.Addrs) == 0 {
+		pi, err := c.client.PeerInfo(nd.PeerInfo.ID)
 		if err != nil {
-			log.Warningf("Couldn't find addrs for peer %s\n", nd.peerInfo.ID.Pretty())
+			log.Warningf("Couldn't find addrs for peer %s\n", nd.PeerInfo.ID.Pretty())
 			return
 		}
-		nd.peerInfo = pi
+		nd.PeerInfo = pi
 	}
-	if nd.userAgent == "" || nd.lastConnect.Add(time.Hour*48).Before(time.Now()){
-		ua, err := c.client.UserAgent(nd.peerInfo.ID)
+	if nd.UserAgent == "" || nd.LastConnect.Add(time.Hour*48).Before(time.Now()) {
+		ua, err := c.client.UserAgent(nd.PeerInfo.ID)
 		if err != nil {
-			log.Warningf("Couldn't find user agent for peer %s\n", nd.peerInfo.ID.Pretty())
+			log.Warningf("Couldn't find user agent for peer %s\n", nd.PeerInfo.ID.Pretty())
 			return
 		}
-		nd.userAgent = ua
+		nd.UserAgent = ua
 	}
-	online, err := c.client.Ping(nd.peerInfo.ID)
+	online, err := c.client.Ping(nd.PeerInfo.ID)
 	if err != nil {
-		log.Errorf("Error pinging peer %s\n", nd.peerInfo.ID.Pretty())
+		log.Errorf("Error pinging peer %s\n", nd.PeerInfo.ID.Pretty())
 		return
 	}
 	if online {
-		nd.lastConnect = time.Now()
+		nd.LastConnect = time.Now()
 	}
 
-	closer, _ := c.client.ClosestPeers(nd.peerInfo.ID)
+	closer, _ := c.client.ClosestPeers(nd.PeerInfo.ID)
 	for _, p := range closer {
+		if p.Pretty() == "" {
+			continue
+		}
 		c.lock.Lock()
 		_, ok := c.theList[p.Pretty()]
 		if !ok {
 			log.Debugf("Found new node: %s\n", p.Pretty())
-			c.theList[p.Pretty()] = &Node{peerInfo: ps.PeerInfo{ID: p}}
+			c.theList[p.Pretty()] = &Node{PeerInfo: ps.PeerInfo{ID: p}}
 		}
 		c.lock.Unlock()
 	}
@@ -181,12 +208,12 @@ func (c *Crawler) logStats() {
 		totalDualStack := 0
 		totalClearnet := 0
 		for _, nd := range c.theList {
-			if len(nd.peerInfo.Addrs) > 0 {
+			if len(nd.PeerInfo.Addrs) > 0 {
 				totalWithIP++
 			} else {
 				continue
 			}
-			nodeType := GetNodeType(nd.peerInfo.Addrs)
+			nodeType := GetNodeType(nd.PeerInfo.Addrs)
 			switch {
 			case nodeType == TorOnly:
 				totalTor++

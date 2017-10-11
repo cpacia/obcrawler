@@ -1,17 +1,30 @@
 {
 	"ImportPath": "github.com/cpacia/obcrawler",
-	"GoVersion": "go1.8",
+	"GoVersion": "go1.9",
 	"GodepVersion": "v79",
 	"Deps": [
+		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.2.0-21-gd974993",
+			"Rev": "d97499360d1ecebc492ea66c7447ea948f417620"
+		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
 			"Comment": "v1-334-g6b9493b",
 			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
 		},
 		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "b8bc1bf767474819792c23f32d8286a45736f1c6"
+		},
+		{
 			"ImportPath": "github.com/op/go-logging",
 			"Comment": "v1-7-g970db52",
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "396c9fc8fb0ce27fc7a1ff136dc5af797bba258a"
 		},
 		{
 			"ImportPath": "gx/ipfs/QmNhVCV7kgAqW6oh6n8m9myxT2ksGPhVZnHkzkBvR5qg2d/go-multicodec-packed",

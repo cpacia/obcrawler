@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"net/http"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -29,14 +29,14 @@ func (a *APIServer) handlePeers(w http.ResponseWriter, r *http.Request) {
 	only := r.URL.Query().Get("only")
 	var peers []string
 	for peer, nd := range a.crawler.theList {
-		if len(nd.peerInfo.Addrs) == 0 {
+		if len(nd.PeerInfo.Addrs) == 0 {
 			continue
 		}
 		if only == "" {
 			peers = append(peers, peer)
 			continue
 		}
-		nodeType := GetNodeType(nd.peerInfo.Addrs)
+		nodeType := GetNodeType(nd.PeerInfo.Addrs)
 
 		switch {
 		case only == "tor" && nodeType == TorOnly:
@@ -73,17 +73,17 @@ func (a *APIServer) handleCount(w http.ResponseWriter, r *http.Request) {
 	}
 	count := 0
 	for _, nd := range a.crawler.theList {
-		if len(nd.peerInfo.Addrs) == 0 {
+		if len(nd.PeerInfo.Addrs) == 0 {
 			continue
 		}
-		if lastActive != "" && nd.lastConnect.Add(d).Before(time.Now()) {
+		if lastActive != "" && nd.LastConnect.Add(d).Before(time.Now()) {
 			continue
 		}
 		if only == "" {
 			count++
 			continue
 		}
-		nodeType := GetNodeType(nd.peerInfo.Addrs)
+		nodeType := GetNodeType(nd.PeerInfo.Addrs)
 
 		switch {
 		case only == "tor" && nodeType == TorOnly:
@@ -111,15 +111,15 @@ func (a *APIServer) handleUserAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	ua := make(map[string]int)
 	for _, nd := range a.crawler.theList {
-		if lastActive != "" && nd.lastConnect.Add(d).Before(time.Now()) {
+		if lastActive != "" && nd.LastConnect.Add(d).Before(time.Now()) {
 			continue
 		}
-		if nd.userAgent != "" {
-			count, ok := ua[nd.userAgent]
+		if nd.UserAgent != "" {
+			count, ok := ua[nd.UserAgent]
 			if !ok {
-				ua[nd.userAgent] = 1
+				ua[nd.UserAgent] = 1
 			} else {
-				ua[nd.userAgent] = count+1
+				ua[nd.UserAgent] = count + 1
 			}
 		}
 	}
