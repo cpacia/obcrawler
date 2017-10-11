@@ -5,7 +5,7 @@ import "time"
 type Snapshot struct {
 	Timestamp   time.Time `json:""`
 	Hour        int       `json:"hour"`
-	sixHour     int       `json:"sixHour"`
+	SixHour     int       `json:"SixHour"`
 	Day         int       `json:"day"`
 	ThreeDay    int       `json:"threeDay"`
 	SevenDay    int       `json:"sevenDay"`
@@ -66,10 +66,10 @@ func (sl *StatsLogger) run() {
 				ratings.Hour += node.Ratings
 			}
 			if node.LastConnect.Add(time.Hour * 6).After(time.Now()) {
-				rec.sixHour = 1
-				all.sixHour++
-				listings.sixHour += node.Listings
-				ratings.sixHour += node.Ratings
+				rec.SixHour = 1
+				all.SixHour++
+				listings.SixHour += node.Listings
+				ratings.SixHour += node.Ratings
 			}
 			if node.LastConnect.Add(time.Hour * 24).After(time.Now()) {
 				rec.Day = 1
@@ -123,7 +123,7 @@ func (sl *StatsLogger) run() {
 			switch nodeType {
 			case Clearnet:
 				clearnet.Hour += rec.Hour
-				clearnet.sixHour += rec.sixHour
+				clearnet.SixHour += rec.SixHour
 				clearnet.Day += rec.Day
 				clearnet.ThreeDay += rec.ThreeDay
 				clearnet.SevenDay += rec.SevenDay
@@ -135,7 +135,7 @@ func (sl *StatsLogger) run() {
 				clearnet.AllTime++
 			case TorOnly:
 				torOnly.Hour += rec.Hour
-				torOnly.sixHour += rec.sixHour
+				torOnly.SixHour += rec.SixHour
 				torOnly.Day += rec.Day
 				torOnly.ThreeDay += rec.ThreeDay
 				torOnly.SevenDay += rec.SevenDay
@@ -147,7 +147,7 @@ func (sl *StatsLogger) run() {
 				torOnly.AllTime++
 			case DualStack:
 				dualStack.Hour += rec.Hour
-				dualStack.sixHour += rec.sixHour
+				dualStack.SixHour += rec.SixHour
 				dualStack.Day += rec.Day
 				dualStack.ThreeDay += rec.ThreeDay
 				dualStack.SevenDay += rec.SevenDay

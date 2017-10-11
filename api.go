@@ -234,7 +234,7 @@ func (a *APIServer) handleChartsNodes(w http.ResponseWriter, r *http.Request) {
 		if s.Timestamp.Before(time.Now().Add(-dt)) {
 			continue
 		}
-
+		log.Notice(s, d, GetStatLevel(s, d))
 		yvals = append(yvals, float64(GetStatLevel(s, d)))
 		xvals = append(xvals, s.Timestamp)
 	}
@@ -602,7 +602,7 @@ func GetStatLevel(stat Snapshot, d time.Duration) int {
 	case d >= time.Hour*24:
 		return stat.Day
 	case d >= time.Hour*6:
-		return stat.sixHour
+		return stat.SixHour
 	case d >= time.Hour:
 		return stat.Hour
 	}
