@@ -40,7 +40,7 @@ func NewStatsLogger(db Datastore, getNodes func() []Node) *StatsLogger {
 }
 
 func (sl *StatsLogger) run() {
-	t := time.NewTicker(time.Second * 20)
+	t := time.NewTicker(time.Hour)
 	for range t.C {
 		nodes := sl.getNodes()
 
