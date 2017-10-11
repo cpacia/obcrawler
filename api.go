@@ -451,7 +451,7 @@ func (a *APIServer) handleChartsListings(w http.ResponseWriter, r *http.Request)
 			},
 		},
 		YAxis: chart.YAxis{
-			Name:      "Nodes",
+			Name:      "Listings",
 			NameStyle: chart.StyleShow(),
 			Style:     chart.StyleShow(),
 			TickStyle: chart.Style{
@@ -462,7 +462,7 @@ func (a *APIServer) handleChartsListings(w http.ResponseWriter, r *http.Request)
 			},
 		},
 		XAxis: chart.XAxis{
-			Name:      "Listings",
+			Name:      "Time",
 			NameStyle: chart.StyleShow(),
 			Style: chart.Style{
 				Show: true,
