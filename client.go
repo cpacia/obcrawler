@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/jsonpb"
 )
 
 type OBClient struct {
@@ -104,6 +106,23 @@ func (c *OBClient) UserAgent(peerID peer.ID) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func (c *OBClient) Profile(peerID peer.ID) (*pb.Profile, error) {
+	pro := new(pb.Profile)
+	resp, err := c.httpClient.Get("http://" + c.addr + "/ob/profile/" + peerID.Pretty())
+	if err != nil {
+		return pro, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return pro, errors.New("Profile not found")
+	}
+
+	err = jsonpb.Unmarshal(resp.Body, pro)
+	if err != nil {
+		return pro, err
+	}
+	return pro, nil
 }
 
 func (c *OBClient) Ping(peerID peer.ID) (bool, error) {

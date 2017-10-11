@@ -180,6 +180,12 @@ func (c *Crawler) crawlNode(nd *Node) {
 		nd.LastConnect = time.Now()
 	}
 
+	profile, err := c.client.Profile(nd.PeerInfo.ID)
+	if err == nil && profile != nil && profile.Stats != nil {
+		nd.Listings = int(profile.Stats.ListingCount)
+		nd.Ratings = int(profile.Stats.RatingCount)
+	}
+
 	closer, _ := c.client.ClosestPeers(nd.PeerInfo.ID)
 	for _, p := range closer {
 		if p.Pretty() == "" {
@@ -207,7 +213,11 @@ func (c *Crawler) logStats() {
 		totalTor := 0
 		totalDualStack := 0
 		totalClearnet := 0
+		listings := 0
+		ratings := 0
 		for _, nd := range c.theList {
+			ratings += nd.Ratings
+			listings += nd.Listings
 			if len(nd.PeerInfo.Addrs) > 0 {
 				totalWithIP++
 			} else {
@@ -223,7 +233,7 @@ func (c *Crawler) logStats() {
 				totalClearnet++
 			}
 		}
-		log.Infof("Total PeerIDs: %d, Total with addrs: %d, Total Clearnet: %d, Total Tor: %d, Total Dualstack: %d\n", total, totalWithIP, totalClearnet, totalTor, totalDualStack)
+		log.Infof("Total PeerIDs: %d, Total with addrs: %d, Total Clearnet: %d, Total Tor: %d, Total Dualstack: %d, Total Listings: %d, Total Ratings: %d\n", total, totalWithIP, totalClearnet, totalTor, totalDualStack, listings, ratings)
 		c.lock.RUnlock()
 	}
 }

@@ -4,6 +4,15 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/OpenBazaar/jsonpb",
+			"Rev": "2519644bb8224794cf46b052bf4eb9686976644d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/pb",
+			"Comment": "v0.9.3-rc2-1-gc595ab3",
+			"Rev": "c595ab3147a82e4855555f98b9ecac78df84d1b7"
+		},
+		{
 			"ImportPath": "github.com/blendlabs/go-exception",
 			"Rev": "04be78b9b2a71cf039fe86cef5221b3d3cb89fd7"
 		},
@@ -25,6 +34,18 @@
 			"ImportPath": "github.com/golang/freetype/truetype",
 			"Comment": "release-137-ge2365df",
 			"Rev": "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/any",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/timestamp",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",

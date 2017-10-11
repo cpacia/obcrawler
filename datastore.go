@@ -47,6 +47,14 @@ func NewBoltDatastore(filePath string) (*BoltDatastore, error) {
 		_, err := btx.CreateBucketIfNotExists([]byte("stats_dualstack"))
 		return err
 	})
+	db.Update(func(btx *bolt.Tx) error {
+		_, err := btx.CreateBucketIfNotExists([]byte("stats_listings"))
+		return err
+	})
+	db.Update(func(btx *bolt.Tx) error {
+		_, err := btx.CreateBucketIfNotExists([]byte("stats_ratings"))
+		return err
+	})
 	return &BoltDatastore{db, sync.RWMutex{}}, nil
 }
 
@@ -110,6 +118,10 @@ func (b *BoltDatastore) PutStat(t StatType, stat Snapshot) error {
 		typeStr = "stats_toronly"
 	case StatDualStack:
 		typeStr = "stats_dualstack"
+	case StatListings:
+		typeStr = "stats_listings"
+	case StatRatings:
+		typeStr = "stats_ratings"
 	}
 
 	return b.db.Update(func(btx *bolt.Tx) error {
@@ -143,6 +155,10 @@ func (b *BoltDatastore) GetStats(t StatType) ([]Snapshot, error) {
 		typeStr = "stats_toronly"
 	case StatDualStack:
 		typeStr = "stats_dualstack"
+	case StatListings:
+		typeStr = "stats_listings"
+	case StatRatings:
+		typeStr = "stats_ratings"
 	}
 
 	err := b.db.View(func(btx *bolt.Tx) error {

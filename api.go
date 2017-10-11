@@ -26,6 +26,8 @@ func (a *APIServer) serve() {
 	http.HandleFunc("/count", a.handleCount)
 	http.HandleFunc("/charts/useragents", a.handleChartsUserAgents)
 	http.HandleFunc("/charts/nodes", a.handleChartsNodes)
+	http.HandleFunc("/charts/listings", a.handleChartsListings)
+	http.HandleFunc("/charts/ratings", a.handleChartsRatings)
 	http.ListenAndServe(a.addr, nil)
 }
 
@@ -376,6 +378,202 @@ func (a *APIServer) handleChartsNodes(w http.ResponseWriter, r *http.Request) {
 		graph.Series = []chart.Series{allSeries, clearnetSeries, torSeries, dualStackSeries}
 	}
 
+
+	graph.Elements = []chart.Renderable{chart.LegendThin(&graph)}
+
+	w.Header().Set("Content-Type", chart.ContentTypePNG)
+	graph.Render(chart.PNG, w)
+}
+
+func (a *APIServer) handleChartsListings(w http.ResponseWriter, r *http.Request) {
+	if a.crawler.db == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Stats database unavailable")
+		return
+	}
+	lastActive := r.URL.Query().Get("lastActive")
+	var d time.Duration
+	var err error
+	if lastActive != "" {
+		d, err = time.ParseDuration(lastActive)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+	timeFrame := r.URL.Query().Get("timeFrame")
+	var dt time.Duration
+	if timeFrame != "" {
+		dt, err = time.ParseDuration(timeFrame)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+
+	// Listings
+	statsListings, err := a.crawler.db.GetStats(StatListings)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	sort.Sort(timeSlice(statsListings))
+	var xvals []time.Time
+	var yvals []float64
+	for _, s := range statsListings {
+		if s.Timestamp.Before(time.Now().Add(-dt)) {
+			continue
+		}
+
+		yvals = append(yvals, float64(GetStatLevel(s, d)))
+		xvals = append(xvals, s.Timestamp)
+	}
+	listingSeries := chart.TimeSeries{
+		Name: "Listings",
+		Style: chart.Style{
+			Show:        true,
+			StrokeColor: chart.ColorCyan,
+			FillColor:   chart.ColorCyan.WithAlpha(64),
+		},
+		XValues: xvals,
+		YValues: yvals,
+	}
+
+	graph := chart.Chart{
+		Width:  1080,
+		Height: 620,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top: 50,
+			},
+		},
+		YAxis: chart.YAxis{
+			Name:      "Nodes",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+			TickStyle: chart.Style{
+				TextRotationDegrees: 45.0,
+			},
+			ValueFormatter: func(v interface{}) string {
+				return fmt.Sprintf("%d", int(v.(float64)))
+			},
+		},
+		XAxis: chart.XAxis{
+			Name:      "Listings",
+			NameStyle: chart.StyleShow(),
+			Style: chart.Style{
+				Show: true,
+			},
+			ValueFormatter: chart.TimeHourValueFormatter,
+			GridMajorStyle: chart.Style{
+				Show:        true,
+				StrokeColor: chart.ColorAlternateGray,
+				StrokeWidth: 1.0,
+			},
+		},
+		Series: []chart.Series{listingSeries},
+	}
+
+	graph.Elements = []chart.Renderable{chart.LegendThin(&graph)}
+
+	w.Header().Set("Content-Type", chart.ContentTypePNG)
+	graph.Render(chart.PNG, w)
+}
+
+func (a *APIServer) handleChartsRatings(w http.ResponseWriter, r *http.Request) {
+	if a.crawler.db == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Stats database unavailable")
+		return
+	}
+	lastActive := r.URL.Query().Get("lastActive")
+	var d time.Duration
+	var err error
+	if lastActive != "" {
+		d, err = time.ParseDuration(lastActive)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+	timeFrame := r.URL.Query().Get("timeFrame")
+	var dt time.Duration
+	if timeFrame != "" {
+		dt, err = time.ParseDuration(timeFrame)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, err.Error())
+			return
+		}
+	}
+
+	// Ratings
+	statsRatings, err := a.crawler.db.GetStats(StatRatings)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, err.Error())
+		return
+	}
+	sort.Sort(timeSlice(statsRatings))
+	var xvals []time.Time
+	var yvals []float64
+	for _, s := range statsRatings {
+		if s.Timestamp.Before(time.Now().Add(-dt)) {
+			continue
+		}
+
+		yvals = append(yvals, float64(GetStatLevel(s, d)))
+		xvals = append(xvals, s.Timestamp)
+	}
+	ratingsSeries := chart.TimeSeries{
+		Name: "Listings",
+		Style: chart.Style{
+			Show:        true,
+			StrokeColor: chart.ColorCyan,
+			FillColor:   chart.ColorCyan.WithAlpha(64),
+		},
+		XValues: xvals,
+		YValues: yvals,
+	}
+
+	graph := chart.Chart{
+		Width:  1080,
+		Height: 620,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top: 50,
+			},
+		},
+		YAxis: chart.YAxis{
+			Name:      "Ratings",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+			TickStyle: chart.Style{
+				TextRotationDegrees: 45.0,
+			},
+			ValueFormatter: func(v interface{}) string {
+				return fmt.Sprintf("%d", int(v.(float64)))
+			},
+		},
+		XAxis: chart.XAxis{
+			Name:      "Time",
+			NameStyle: chart.StyleShow(),
+			Style: chart.Style{
+				Show: true,
+			},
+			ValueFormatter: chart.TimeHourValueFormatter,
+			GridMajorStyle: chart.Style{
+				Show:        true,
+				StrokeColor: chart.ColorAlternateGray,
+				StrokeWidth: 1.0,
+			},
+		},
+		Series: []chart.Series{ratingsSeries},
+	}
 
 	graph.Elements = []chart.Renderable{chart.LegendThin(&graph)}
 
