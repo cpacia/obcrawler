@@ -181,7 +181,7 @@ func (c *Crawler) crawlNode(nd *Node) {
 	if err == nil && profile != nil && profile.Stats != nil {
 		nd.Listings = int(profile.Stats.ListingCount)
 		nd.Ratings = int(profile.Stats.RatingCount)
-		nd.Vendor = profile.Vendor
+		nd.Vendor = profile.Stats.ListingCount > 0
 	}
 
 
