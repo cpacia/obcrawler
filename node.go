@@ -14,4 +14,5 @@ type Node struct {
 	CrawlActive bool               `json:"crawlActive"` // are we currently crawling this client
 	Listings    int                `json:"listings"`    // number of listings node has
 	Ratings     int                `json:"ratings"`     // number of ratings
+	Vendor      bool               `json:"vendor"`      // is node a vendor
 }

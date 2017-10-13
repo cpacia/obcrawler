@@ -159,7 +159,6 @@ func (c *Crawler) crawlNode(nd *Node) {
 		pi, err := c.client.PeerInfo(nd.PeerInfo.ID)
 		if err != nil {
 			log.Warningf("Couldn't find addrs for peer %s\n", nd.PeerInfo.ID.Pretty())
-			return
 		}
 		nd.PeerInfo = pi
 	}
@@ -167,14 +166,12 @@ func (c *Crawler) crawlNode(nd *Node) {
 		ua, err := c.client.UserAgent(nd.PeerInfo.ID)
 		if err != nil {
 			log.Warningf("Couldn't find user agent for peer %s\n", nd.PeerInfo.ID.Pretty())
-			return
 		}
 		nd.UserAgent = ua
 	}
 	online, err := c.client.Ping(nd.PeerInfo.ID)
 	if err != nil {
 		log.Errorf("Error pinging peer %s\n", nd.PeerInfo.ID.Pretty())
-		return
 	}
 	if online {
 		nd.LastConnect = time.Now()
@@ -184,7 +181,9 @@ func (c *Crawler) crawlNode(nd *Node) {
 	if err == nil && profile != nil && profile.Stats != nil {
 		nd.Listings = int(profile.Stats.ListingCount)
 		nd.Ratings = int(profile.Stats.RatingCount)
+		nd.Vendor = profile.Vendor
 	}
+
 
 	closer, _ := c.client.ClosestPeers(nd.PeerInfo.ID)
 	for _, p := range closer {

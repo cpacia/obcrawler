@@ -26,6 +26,7 @@ const (
 	StatDualStack
 	StatListings
 	StatRatings
+	StatVendors
 )
 
 type StatsLogger struct {
@@ -52,6 +53,7 @@ func (sl *StatsLogger) run() {
 		dualStack := Snapshot{Timestamp: time.Now()}
 		listings := Snapshot{Timestamp: time.Now()}
 		ratings := Snapshot{Timestamp: time.Now()}
+		vendors := Snapshot{Timestamp: time.Now()}
 
 
 		for _, node := range nodes {
@@ -59,65 +61,98 @@ func (sl *StatsLogger) run() {
 			all.AllTime++
 			listings.AllTime += node.Listings
 			ratings.AllTime += node.Ratings
+			if node.Vendor {
+				vendors.AllTime++
+			}
 			if node.LastConnect.Add(time.Hour).After(time.Now()) {
 				rec.Hour = 1
 				all.Hour++
 				listings.Hour += node.Listings
 				ratings.Hour += node.Ratings
+				if node.Vendor {
+					vendors.Hour++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 6).After(time.Now()) {
 				rec.SixHour = 1
 				all.SixHour++
 				listings.SixHour += node.Listings
 				ratings.SixHour += node.Ratings
+				if node.Vendor {
+					vendors.SixHour++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24).After(time.Now()) {
 				rec.Day = 1
 				all.Day++
 				listings.Day += node.Listings
 				ratings.Day += node.Ratings
+				if node.Vendor {
+					vendors.Day++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 3).After(time.Now()) {
 				rec.ThreeDay = 1
 				all.ThreeDay++
 				listings.ThreeDay += node.Listings
 				ratings.ThreeDay += node.Ratings
+				if node.Vendor {
+					vendors.ThreeDay++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 7).After(time.Now()) {
 				rec.SevenDay = 1
 				all.SevenDay++
 				listings.SevenDay += node.Listings
 				ratings.SevenDay += node.Ratings
+				if node.Vendor {
+					vendors.SevenDay++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 14).After(time.Now()) {
 				rec.FourteenDay = 1
 				all.FourteenDay++
 				listings.FourteenDay += node.Listings
 				ratings.FourteenDay += node.Ratings
+				if node.Vendor {
+					vendors.FourteenDay++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 30).After(time.Now()) {
 				rec.ThirtyDay = 1
 				all.ThirtyDay++
 				listings.ThirtyDay += node.Listings
 				ratings.ThirtyDay += node.Ratings
+				if node.Vendor {
+					vendors.ThirtyDay++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 90).After(time.Now()) {
 				rec.NinetyDay = 1
 				all.NinetyDay++
 				listings.NinetyDay += node.Listings
 				ratings.NinetyDay += node.Ratings
+				if node.Vendor {
+					vendors.NinetyDay++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 182).After(time.Now()) {
 				rec.HalfYear = 1
 				all.HalfYear++
 				listings.HalfYear += node.Listings
 				ratings.HalfYear += node.Ratings
+				if node.Vendor {
+					vendors.HalfYear++
+				}
 			}
 			if node.LastConnect.Add(time.Hour * 24 * 365).After(time.Now()) {
 				rec.Year = 1
 				all.Year++
 				listings.Year += node.Listings
 				ratings.Year += node.Ratings
+				if node.Vendor {
+					vendors.Year++
+				}
 			}
 			nodeType := GetNodeType(node.PeerInfo.Addrs)
 			switch nodeType {
@@ -165,5 +200,6 @@ func (sl *StatsLogger) run() {
 		sl.db.PutStat(StatDualStack, dualStack)
 		sl.db.PutStat(StatListings, listings)
 		sl.db.PutStat(StatRatings, ratings)
+		sl.db.PutStat(StatVendors, vendors)
 	}
 }
