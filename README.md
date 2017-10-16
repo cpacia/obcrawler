@@ -13,7 +13,7 @@ go get github.com/cpacia/obcrawler
 obcrawler start
 ```
 
-`curl http://localhpst:8080/peers`
+`curl http://localhost:8080/peers`
 ```
 [
     "QmUD1jyaRmpJchLXXWUf9ZeuG4ZaFjMm8uY1XDakKtBExh",
@@ -28,22 +28,22 @@ obcrawler start
 ]
 ```
 
-`curl http://localhpst:8080/peers?only=tor`
+`curl http://localhost:8080/peers?only=tor`
 
-`curl http://localhpst:8080/peers?only=dualstack`
+`curl http://localhost:8080/peers?only=dualstack`
 
-`curl http://localhpst:8080/peers?only=clearnet`
+`curl http://localhost:8080/peers?only=clearnet`
 
-`curl http://localhpst:8080/count`
+`curl http://localhost:8080/count`
 ```
 259
 ```
 
-`curl http://localhpst:8080/count?lastActive=1d`
+`curl http://localhost:8080/count?lastActive=1d`
 
-`curl http://localhpst:8080/count?lastActive=1d&only=tor`
+`curl http://localhost:8080/count?lastActive=1d&only=tor`
 
-`curl http://localhpst:8080/useragents`
+`curl http://localhost:8080/useragents`
 ```
 {
     "/openbazaar-go:0.6.0/": 1,
