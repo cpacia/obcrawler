@@ -15,11 +15,11 @@ import (
 type APIServer struct {
 	crawler  *Crawler
 	addr     string
-	repoPath string
+	hostname string
 }
 
-func NewAPIServer(addr string, crawler *Crawler, repoPath string) *APIServer {
-	return &APIServer{crawler, addr, repoPath}
+func NewAPIServer(addr string, crawler *Crawler, hostname string) *APIServer {
+	return &APIServer{crawler, addr, hostname}
 }
 
 func (a *APIServer) serve() {
@@ -38,20 +38,47 @@ func (a *APIServer) serve() {
 
 func (a *APIServer) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s := strings.Split(r.URL.Path, "/")
-	f := "index.html"
+	var ret string
 	if s[len(s)-1] == "styles.css" {
-		f = "styles.css"
+		b, err := Asset("static/styles.css")
+		if err != nil {
+			fmt.Println("1")
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Add("Content-Type", " text/css")
+		ret = string(b)
+	} else {
+		b, err := Asset("static/index.html")
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		s := strings.Replace(string(b), "{HOSTNAME}", a.hostname, -1)
+		ret = s
 	}
-	http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static"), f))
+	fmt.Fprint(w, ret)
 }
 
 func (a *APIServer) handleSingleCharts(w http.ResponseWriter, r *http.Request) {
 	s := strings.Split(r.URL.Path, "/")
+	var ret string
 	if s[len(s)-1] == "styles.css" {
-		http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static"), s[len(s)-1]))
-		return
+		b, err := Asset("static/styles.css")
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+		}
+		w.Header().Add("Content-Type", " text/css")
+		ret = string(b)
+	} else {
+		b, err := Asset(path.Join("static", "singleCharts", s[len(s)-1]))
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+		}
+		s := strings.Replace(string(b), "{HOSTNAME}", a.hostname, -1)
+		ret = s
 	}
-	http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static", "singleCharts"), s[len(s)-1]))
+	fmt.Fprint(w, ret)
 }
 
 func (a *APIServer) handlePeers(w http.ResponseWriter, r *http.Request) {

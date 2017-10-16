@@ -11,9 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-	"io/ioutil"
 	"strings"
-	"path"
 	"fmt"
 )
 
@@ -65,15 +63,11 @@ func main() {
 	}
 }
 
-var datadir = "/home/chris/.obcrawler"
-var hostname = "localhost:8080"
-
 func (x *Start) Execute(args []string) error {
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
 	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(backendStdoutFormatter)
-	var err error
-	datadir, err = getRepoPath()
+	datadir, err := getRepoPath()
 	if err != nil {
 		return err
 	}
@@ -102,15 +96,10 @@ func (x *Start) Execute(args []string) error {
 		sl := NewStatsLogger(db, crawler.GetNodes)
 		go sl.run()
 	}
-	p := strings.Split(x.APIServerAddr, ":")[1]
 
-	hostname = fmt.Sprintf("%s:%s", x.Hostname, p)
-	err = filepath.Walk("static", makeStaticFile)
-	if err != nil {
-		return err
-	}
+	p := strings.Split(x.APIServerAddr, ":")
 
-	server := NewAPIServer(x.APIServerAddr, crawler, datadir)
+	server := NewAPIServer(x.APIServerAddr, crawler, fmt.Sprintf("%s:%s", x.Hostname, p[1]))
 	server.serve()
 	return nil
 }
@@ -136,30 +125,4 @@ func getRepoPath() (string, error) {
 
 	// Return the shortest lexical representation of the path
 	return filepath.Clean(fullPath), nil
-}
-
-func writeStaticFiles(hostname, repoPath string) error {
-	return nil
-}
-
-func makeStaticFile(pth string, info os.FileInfo, err error) error {
-	if err != nil {
-		return err
-	}
-	switch(pth) {
-	case "static":
-		os.Mkdir(path.Join(datadir, "static"), os.ModePerm)
-		return nil
-	case "static/singleCharts":
-		os.Mkdir(path.Join(datadir, "static", "singleCharts"), os.ModePerm)
-		return nil
-	}
-
-	b, err := ioutil.ReadFile(pth)
-	if err != nil {
-		return err
-	}
-	new := strings.Replace(string(b), "{HOSTNAME}", hostname, -1)
-	ioutil.WriteFile(path.Join(datadir, pth), []byte(new), os.ModePerm)
-	return nil
 }
