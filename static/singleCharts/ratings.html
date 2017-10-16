@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>About - OB1</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Making online trade free for everyone, everywhere.">
+<link rel="icon" type="image/png" href="http://ob1.io/img/favicon.png" />
+<link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<script src="chartRequester.js"> </script>
+<script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-67395123-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+</head>
+<body>
+<div class="container">
+<div class="header" style="background: #000">
+<ul>
+<li><a href="http://ob1.io/index.html" class="mr25"><img src="http://ob1.io/img/icon.png" width="56px" /></a></li>
+<li><a href="http://ob1.io/about.html" class="mr25">About</a></li>
+<li><a href="https://medium.com/openbazaarproject" target="_blank" class="mr25">Blog</a></li>
+<li><a href="../index.html" class="mr25 white">Charts</a></li>
+<li><a href="https://twitter.com/ob1company" target="_blank"><img src="http://ob1.io/img/twitter.png" width="20px" /></a></li>
+</ul>
+</div>
+<div class="main align-left" style="margin: 0 50px">
+<h3 class="mt40" style="margin-bottom: 10px;">Number of Listings Rated</h3>
+
+<div style="margin: 20px 0px 10px 0px; display: inline-block;"> 
+<span style="margin-right: 10px;">Time Frame: </span> 
+<span id="1hTimeFrame" style="margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1h </span>
+<span id="12hTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;" id=""> 12h </span>
+<span id="1dTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1d </span>
+<span id="3dTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 3d </span>
+<span id="7dTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer; text-decoration: underline; font-weight: bold;"> 1w </span>
+<span id="1mTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1m </span>
+<span id="3mTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 3m </span>
+<span id="1yTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1y </span>
+<span id="allTimeFrame" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> All </span>
+</div>
+
+<div style="margin: 20px 0px 10px 0px; display: inline-block;"> 
+<span style="margin-right: 10px;">Last Active: </span> 
+<span id="1hLastActive" style="margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1h </span>
+<span id="12hLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;" id=""> 12h </span>
+<span id="1dLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1d </span>
+<span id="3dLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 3d </span>
+<span id="7dLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer; text-decoration: underline; font-weight: bold;"> 1w </span>
+<span id="1mLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1m </span>
+<span id="3mLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 3m </span>
+<span id="1yLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> 1y </span>
+<span id="allLastActive" style="padding: 3px; margin-right: 10px; border-radius: 3px; color: #00aeeb; cursor: pointer;"> All </span>
+</div>
+
+
+	<img src="http://{HOSTNAME}/charts/ratings?timeFrame=168h&lastActive=168h" id="chartImage" style="max-width: 100%; max-height: 100%;">
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+</div>
+<div style="text-align: right; margin-top: 10px; margin-bottom: 10px; margin-right: 10px;"> Visuals built in collaboration with <a href="https://rawflood.com" style="color: #004a7c;"> Raw Flood </a> </div>
+<div class="footer">
+<ul>
+<li><a href="index.html" class="mr25"><img src="img/icon.png" width="56px" /></a></li>
+<li><a href="about.html" class="mr25">About</a></li>
+<li><a href="https://medium.com/openbazaarproject" target="_blank" class="mr25">Blog</a></li>
+<li><a href="../index.html" class="mr25 white">Charts</a></li>
+<li><a href="https://twitter.com/ob1company" target="_blank"><img src="img/twitter.png" width="20px" /></a></li>
+</ul>
+</div>
+</div>
+</body>
+</html>

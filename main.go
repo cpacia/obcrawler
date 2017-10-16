@@ -11,6 +11,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+	"io/ioutil"
+	"strings"
+	"path"
+	"fmt"
 )
 
 func init() {
@@ -21,6 +25,7 @@ type Start struct {
 	GatewayAddr    string `short:"g" long:"gatewayaddr" description:"the address of the openbazaar-go gateway" default:"127.0.0.1:4002"`
 	APIServerAddr  string `short:"a" long:"apiaddr" description:"the address to bind the API server to" default:":8080"`
 	DataDir        string `short:"d" long:"datadir" description:"directory to use for the persistent cache"`
+	Hostname       string `short:"h" long:"hostname" description:"hostname for the chart server" default:"localhost"`
 	CrawlDelay     int    `short:"c" long:"crawldelay" description:"time between crawls in seconds" default:"22"`
 	NodeDelay      int    `short:"n" long:"nodedelay" description:"how long to wait before crawling a node again in seconds" default:"5400"`
 	MaxConcurrency int    `short:"m" long:"maxconcurrency" description:"maximum number of nodes to crawl at one time" default:"20"`
@@ -60,11 +65,15 @@ func main() {
 	}
 }
 
+var datadir = "/home/chris/.obcrawler"
+var hostname = "localhost:8080"
+
 func (x *Start) Execute(args []string) error {
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
 	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(backendStdoutFormatter)
-	datadir, err := getRepoPath()
+	var err error
+	datadir, err = getRepoPath()
 	if err != nil {
 		return err
 	}
@@ -93,8 +102,15 @@ func (x *Start) Execute(args []string) error {
 		sl := NewStatsLogger(db, crawler.GetNodes)
 		go sl.run()
 	}
+	p := strings.Split(x.APIServerAddr, ":")[1]
 
-	server := NewAPIServer(x.APIServerAddr, crawler)
+	hostname = fmt.Sprintf("%s:%s", x.Hostname, p)
+	err = filepath.Walk("static", makeStaticFile)
+	if err != nil {
+		return err
+	}
+
+	server := NewAPIServer(x.APIServerAddr, crawler, datadir)
 	server.serve()
 	return nil
 }
@@ -120,4 +136,30 @@ func getRepoPath() (string, error) {
 
 	// Return the shortest lexical representation of the path
 	return filepath.Clean(fullPath), nil
+}
+
+func writeStaticFiles(hostname, repoPath string) error {
+	return nil
+}
+
+func makeStaticFile(pth string, info os.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
+	switch(pth) {
+	case "static":
+		os.Mkdir(path.Join(datadir, "static"), os.ModePerm)
+		return nil
+	case "static/singleCharts":
+		os.Mkdir(path.Join(datadir, "static", "singleCharts"), os.ModePerm)
+		return nil
+	}
+
+	b, err := ioutil.ReadFile(pth)
+	if err != nil {
+		return err
+	}
+	new := strings.Replace(string(b), "{HOSTNAME}", hostname, -1)
+	ioutil.WriteFile(path.Join(datadir, pth), []byte(new), os.ModePerm)
+	return nil
 }

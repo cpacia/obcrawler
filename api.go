@@ -5,22 +5,26 @@ import (
 	"fmt"
 	"github.com/wcharczuk/go-chart"
 	"net/http"
-	"strconv"
-	"time"
+	"path"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type APIServer struct {
-	crawler *Crawler
-	addr    string
+	crawler  *Crawler
+	addr     string
+	repoPath string
 }
 
-func NewAPIServer(addr string, crawler *Crawler) *APIServer {
-	return &APIServer{crawler, addr}
+func NewAPIServer(addr string, crawler *Crawler, repoPath string) *APIServer {
+	return &APIServer{crawler, addr, repoPath}
 }
 
 func (a *APIServer) serve() {
+	http.HandleFunc("/", a.handleIndex)
+	http.HandleFunc("/singleCharts/", a.handleSingleCharts)
 	http.HandleFunc("/useragents", a.handleUserAgents)
 	http.HandleFunc("/peers", a.handlePeers)
 	http.HandleFunc("/count", a.handleCount)
@@ -30,6 +34,24 @@ func (a *APIServer) serve() {
 	http.HandleFunc("/charts/ratings", a.handleChartsRatings)
 	http.HandleFunc("/charts/vendors", a.handleChartsVendors)
 	http.ListenAndServe(a.addr, nil)
+}
+
+func (a *APIServer) handleIndex(w http.ResponseWriter, r *http.Request) {
+	s := strings.Split(r.URL.Path, "/")
+	f := "index.html"
+	if s[len(s)-1] == "styles.css" {
+		f = "styles.css"
+	}
+	http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static"), f))
+}
+
+func (a *APIServer) handleSingleCharts(w http.ResponseWriter, r *http.Request) {
+	s := strings.Split(r.URL.Path, "/")
+	if s[len(s)-1] == "styles.css" {
+		http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static"), s[len(s)-1]))
+		return
+	}
+	http.ServeFile(w, r, fmt.Sprintf("%s/%s", path.Join(a.repoPath, "static", "singleCharts"), s[len(s)-1]))
 }
 
 func (a *APIServer) handlePeers(w http.ResponseWriter, r *http.Request) {
@@ -365,10 +387,9 @@ func (a *APIServer) handleChartsNodes(w http.ResponseWriter, r *http.Request) {
 				StrokeColor: chart.ColorAlternateGray,
 				StrokeWidth: 1.0,
 			},
-
 		},
 	}
-	switch(strings.ToLower(only)){
+	switch strings.ToLower(only) {
 	case "clearnet":
 		graph.Series = []chart.Series{clearnetSeries}
 	case "tor":
@@ -378,7 +399,6 @@ func (a *APIServer) handleChartsNodes(w http.ResponseWriter, r *http.Request) {
 	default:
 		graph.Series = []chart.Series{allSeries, clearnetSeries, torSeries, dualStackSeries}
 	}
-
 
 	graph.Elements = []chart.Renderable{chart.LegendThin(&graph)}
 
@@ -683,6 +703,8 @@ func (a *APIServer) handleChartsVendors(w http.ResponseWriter, r *http.Request) 
 func GetStatLevel(stat Snapshot, d time.Duration) int {
 	switch {
 	case d == 0:
+		return stat.AllTime
+	case d >= time.Hour*99999:
 		return stat.AllTime
 	case d >= time.Hour*24*356:
 		return stat.Year
