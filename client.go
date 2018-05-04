@@ -24,10 +24,15 @@ func NewOBClient(addr string) *OBClient {
 
 func (c *OBClient) Peers() ([]peer.ID, error) {
 	var pids []peer.ID
-	resp, err := c.httpClient.Get("http://" + c.addr + "/ob/peers")
+	url := "http://" + c.addr + "/ob/peers"
+	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return pids, err
 	}
+	if resp.StatusCode >= 400 {
+		return pids, errors.New(url + " " + resp.Status)
+	}
+
 	var peers []string
 	decoder := json.NewDecoder(resp.Body)
 	err = decoder.Decode(&peers)

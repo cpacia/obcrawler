@@ -80,8 +80,12 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	client := NewOBClient(x.GatewayAddr)
+	if _, err := client.Peers(); err != nil {
+		return err
+	}
 	config := CrawlerConfig{
-		client:         NewOBClient(x.GatewayAddr),
+		client:         client,
 		crawlDelay:     time.Second * time.Duration(x.CrawlDelay),
 		nodeDelay:      time.Second * time.Duration(x.NodeDelay),
 		maxConcurrency: x.MaxConcurrency,
