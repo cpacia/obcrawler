@@ -32,6 +32,7 @@ type Crawler struct {
 	numWorkers    uint
 	ipnsQuorum    uint
 	workChan      chan *Job
+	cacheImages   bool
 	subs          map[uint64]*Subscription
 	subMtx        sync.RWMutex
 	db            *repo.Database
@@ -49,6 +50,7 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		workChan:      make(chan *Job),
 		subs:          make(map[uint64]*Subscription),
 		subMtx:        sync.RWMutex{},
+		cacheImages:   !cfg.DisableImageCaching,
 		numPubsub:     cfg.PubsubNodes,
 		numWorkers:    cfg.NumWorkers,
 		ipnsQuorum:    cfg.IPNSQuorum,

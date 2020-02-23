@@ -49,7 +49,7 @@ func NewDatabase(dataDir string, opts ...Option) (*Database, error) {
 		return nil, err
 	}
 
-	if err := db.AutoMigrate(&Peer{}).Error; err != nil {
+	if err := db.AutoMigrate(&Peer{}, &CIDRecord{}).Error; err != nil {
 		return nil, err
 	}
 

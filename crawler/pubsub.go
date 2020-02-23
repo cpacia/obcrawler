@@ -95,6 +95,7 @@ func (c *Crawler) listenPubsub() error {
 					continue
 				}
 
+				banned := false
 				err = c.db.Update(func(db *gorm.DB) error {
 					var peer repo.Peer
 					err := db.Where("peer_id=?", message.From().Pretty()).First(&peer).Error
@@ -108,10 +109,14 @@ func (c *Crawler) listenPubsub() error {
 					}
 					peer.IPNSExpiration = expiration
 					peer.IPNSRecord = message.Data()
+					banned = peer.Banned
 					return db.Save(&peer).Error
 				})
 				if err != nil {
 					log.Errorf("Error saving IPNS record for peer %s: %s", message.From().Pretty(), err)
+				}
+				if banned {
+					continue
 				}
 				log.Debugf("Received new IPNS record from %s. Expiration %s", message.From().Pretty(), expiration)
 				go func() {

@@ -11,3 +11,8 @@ type Peer struct {
 	IPNSRecord     []byte
 	Banned         bool
 }
+
+type CIDRecord struct {
+	CID    string `gorm:"primary_key"`
+	PeerID string `gorm:"index"`
+}

@@ -8,7 +8,9 @@ require (
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-ipfs v0.4.23
 	github.com/ipfs/go-ipfs-files v0.0.3
+	github.com/ipfs/go-ipld-format v0.0.2
 	github.com/ipfs/go-ipns v0.0.1
+	github.com/ipfs/go-merkledag v0.0.3
 	github.com/ipfs/go-path v0.0.4
 	github.com/ipfs/interface-go-ipfs-core v0.0.8
 	github.com/jessevdk/go-flags v1.4.0
