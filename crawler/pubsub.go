@@ -1,6 +1,8 @@
 package crawler
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-ipfs/core/coreapi"
@@ -8,38 +10,68 @@ import (
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	iface "github.com/ipfs/interface-go-ipfs-core"
 	"github.com/jinzhu/gorm"
+	"sync"
 	"time"
 )
 
 const ipnsPubsubTopic = "/ipns/all"
 
 func (c *Crawler) listenPubsub() error {
-	api, err := coreapi.NewCoreAPI(c.nodes[len(c.nodes)-1].IPFSNode())
-	if err != nil {
-		return err
-	}
-	sub, err := api.PubSub().Subscribe(c.ctx, ipnsPubsubTopic)
-	if err != nil {
-		return err
-	}
-
 	messageChan := make(chan iface.PubSubMessage)
-	go func() {
-		for {
-			message, err := sub.Next(c.ctx)
-			if err != nil {
-				log.Errorf("Error fetching next subscription message %s", err.Error())
-				return
-			}
-			messageChan <- message
+
+	subs := make([]iface.PubSubSubscription, c.numPubsub)
+	for _, n := range c.nodes[:c.numPubsub] {
+		api, err := coreapi.NewCoreAPI(n.IPFSNode())
+		if err != nil {
+			return err
 		}
-	}()
+		sub, err := api.PubSub().Subscribe(c.ctx, ipnsPubsubTopic)
+		if err != nil {
+			return err
+		}
+		subs = append(subs, sub)
+
+		go func() {
+			for {
+				message, err := sub.Next(c.ctx)
+				if err != nil {
+					log.Errorf("Error fetching next subscription message %s", err.Error())
+					return
+				}
+				messageChan <- message
+			}
+		}()
+	}
 	go func() {
+		mtx := sync.Mutex{}
+		recentMessasges := make(map[string]struct{})
+
 		for {
 			select {
 			case <-c.shutdown:
+				for _, sub := range subs {
+					sub.Close()
+				}
 				return
 			case message := <-messageChan:
+				h := sha256.Sum256(append([]byte(message.From()), message.Data()...))
+				id := hex.EncodeToString(h[:])
+
+				mtx.Lock()
+				_, ok := recentMessasges[id]
+				if ok {
+					mtx.Unlock()
+					continue
+				}
+				recentMessasges[id] = struct{}{}
+				mtx.Unlock()
+
+				time.AfterFunc(time.Minute, func() {
+					mtx.Lock()
+					delete(recentMessasges, id)
+					mtx.Unlock()
+				})
+
 				rec := new(ipnspb.IpnsEntry)
 				if err := proto.Unmarshal(message.Data(), rec); err != nil {
 					log.Errorf("Error unmarshalling IPNS record for peer %s: %s", message.From().Pretty(), err)
@@ -72,6 +104,7 @@ func (c *Crawler) listenPubsub() error {
 						peer.PeerID = message.From().Pretty()
 						peer.FirstSeen = time.Now()
 						peer.LastSeen = time.Now()
+						log.Infof("Detected new peer: %s", message.From().Pretty())
 					}
 					peer.IPNSExpiration = expiration
 					peer.IPNSRecord = message.Data()
@@ -80,8 +113,14 @@ func (c *Crawler) listenPubsub() error {
 				if err != nil {
 					log.Errorf("Error saving IPNS record for peer %s: %s", message.From().Pretty(), err)
 				}
-
 				log.Debugf("Received new IPNS record from %s. Expiration %s", message.From().Pretty(), expiration)
+				go func() {
+					c.workChan <- &Job{
+						Peer:       message.From(),
+						Expiration: expiration,
+						IPNSRecord: rec,
+					}
+				}()
 			}
 		}
 	}()

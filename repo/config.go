@@ -54,6 +54,8 @@ var (
 // See loadConfig for details on the configuration load process.
 type Config struct {
 	NumNodes          uint          `short:"n" long:"nodes" description:"Number of IPFS nodes to spin up." default:"10"`
+	NumWorkers        uint          `short:"w" long:"workers" description:"Number of workers to use when crawling nodes" default:"12"`
+	PubsubNodes       uint          `short:"p" long:"pubsubnodes" description:"Number of pubsub nodes to listen on." default:"3"`
 	ShowVersion       bool          `short:"v" long:"version" description:"Display version information and exit"`
 	ConfigFile        string        `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir           string        `short:"d" long:"datadir" description:"Directory to store data"`
@@ -136,6 +138,22 @@ func LoadConfig() (*Config, error) {
 			return nil, err
 		}
 		configFileError = err
+	}
+
+	if cfg.NumNodes == 0 {
+		return nil, errors.New("IPFS nodes must not be zero")
+	}
+
+	if cfg.NumWorkers == 0 {
+		return nil, errors.New("workers must not be zero")
+	}
+
+	if cfg.PubsubNodes == 0 {
+		return nil, errors.New("pubsub nodes must not be zero")
+	}
+
+	if cfg.PubsubNodes > cfg.NumNodes {
+		return nil, errors.New("pubsub nodes must not exceeds the number of IPFS nodes")
 	}
 
 	_, ok := LogLevelMap[strings.ToLower(cfg.LogLevel)]

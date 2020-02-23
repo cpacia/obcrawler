@@ -20,6 +20,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,6 +28,12 @@ var log = logging.MustGetLogger("CRWLR")
 
 type Crawler struct {
 	nodes         []*core.OpenBazaarNode
+	numPubsub     uint
+	numWorkers    uint
+	ipnsQuorum    uint
+	workChan      chan *Job
+	subs          map[uint64]*Subscription
+	subMtx        sync.RWMutex
 	db            *repo.Database
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -39,6 +46,12 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 	crawler := &Crawler{
 		ctx:           ctx,
 		cancel:        cancel,
+		workChan:      make(chan *Job),
+		subs:          make(map[uint64]*Subscription),
+		subMtx:        sync.RWMutex{},
+		numPubsub:     cfg.PubsubNodes,
+		numWorkers:    cfg.NumWorkers,
+		ipnsQuorum:    cfg.IPNSQuorum,
 		crawlInterval: cfg.CrawlInterval,
 		shutdown:      make(chan struct{}),
 	}
@@ -123,7 +136,24 @@ func (c *Crawler) UnBanData(cid cid.Cid) error {
 }
 
 func (c *Crawler) Subscribe() (*Subscription, error) {
-	return nil, nil
+	i := mrand.Uint64()
+	sub := &Subscription{
+		Out: make(chan *Object),
+		Close: func() error {
+			c.subMtx.Lock()
+			defer c.subMtx.Unlock()
+
+			delete(c.subs, i)
+			return nil
+		},
+	}
+
+	c.subMtx.Lock()
+	defer c.subMtx.Unlock()
+
+	c.subs[i] = sub
+
+	return sub, nil
 }
 
 func (c *Crawler) Start() error {
@@ -147,7 +177,7 @@ func (c *Crawler) Start() error {
 					log.Errorf("Error generating peer ID: %s", err)
 					continue
 				}
-				log.Infof("Node %d starting network crawl", r)
+				log.Debugf("Node %d starting network crawl", r)
 				_, err = c.nodes[r].IPFSNode().Routing.FindPeer(context.Background(), randPeer)
 				if err != routing.ErrNotFound {
 					log.Errorf("Error crawling for more peers %s", err)
@@ -157,6 +187,9 @@ func (c *Crawler) Start() error {
 			}
 		}
 	}()
+	for i := 0; i < int(c.numWorkers); i++ {
+		go c.worker()
+	}
 	return c.listenPubsub()
 }
 
@@ -181,6 +214,7 @@ func (c *Crawler) listenPeers(n *core2.IpfsNode) {
 			} else if gorm.IsRecordNotFoundError(err) {
 				peer.FirstSeen = time.Now()
 				peer.PeerID = conn.RemotePeer().Pretty()
+				log.Infof("Detected new peer: %s", conn.RemotePeer().Pretty())
 			}
 			peer.LastSeen = time.Now()
 			return db.Save(&peer).Error

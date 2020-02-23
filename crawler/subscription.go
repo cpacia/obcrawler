@@ -1,6 +1,13 @@
 package crawler
 
+import "time"
+
 type Subscription struct {
 	Close func() error
-	Out   <-chan interface{}
+	Out   chan *Object
+}
+
+type Object struct {
+	Data           interface{}
+	ExpirationDate time.Time
 }

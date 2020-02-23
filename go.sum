@@ -127,6 +127,8 @@ github.com/cpacia/multiwallet v0.0.0-20200109002742-ef05d74113c6 h1:8cAgZYOY04I5
 github.com/cpacia/multiwallet v0.0.0-20200109002742-ef05d74113c6/go.mod h1:i1NBFt7sf8Xwi3uivSW1UZWOtjI0JAk55ciC8DMw4dI=
 github.com/cpacia/openbazaar3.0 v0.0.0-20200223013108-c083826bd90f h1:tQWlTNgKmh1uYcQbVEmR0z/PWdxix3PCFcbeZJMFATo=
 github.com/cpacia/openbazaar3.0 v0.0.0-20200223013108-c083826bd90f/go.mod h1:qbew2/TKegkoFwm8c9Dy4N9591dCGH2Eufo32j1ZNrw=
+github.com/cpacia/openbazaar3.0 v0.0.0-20200223054505-bc325264f6b3 h1:+fAO/5xz5Y+UiHNtaPcIBnPrjvPjLsaThp7FJy3Jwok=
+github.com/cpacia/openbazaar3.0 v0.0.0-20200223054505-bc325264f6b3/go.mod h1:qbew2/TKegkoFwm8c9Dy4N9591dCGH2Eufo32j1ZNrw=
 github.com/cpacia/proxyclient v0.0.0-20191212063311-f03265f1fade h1:dYWfCioY8ULYxnYd2D1trUa2oOeY5nHDBa9tR90LsU8=
 github.com/cpacia/proxyclient v0.0.0-20191212063311-f03265f1fade/go.mod h1:IF9edCuNRNUB3WGaKcXfep4Azx/GKONbQFVPZJ3OniE=
 github.com/cpacia/wallet-interface v0.0.0-20191217232838-79018d77e07f h1:K2Ra3UWMsPEr9VhttjoQMaMuP4KnjFWycz9WNI5J2p0=
