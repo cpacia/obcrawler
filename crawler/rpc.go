@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/cpacia/obcrawler/rpc"
+	"github.com/cpacia/obcrawler/rpc/pb"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -54,8 +55,9 @@ func newGrpcServer(netAddrs []net.Addr, crawler *Crawler, cfg *repo.Config) (*rp
 		}
 
 		gRPCServer := rpc.NewGrpcServer(crawler)
+		pb.RegisterObcrawlerServer(server, gRPCServer)
 
-		log.Infof("Experimental gRPC server listening on %s", addr)
+		log.Infof("gRPC server listening on %s", addr)
 
 		go func() {
 			if err := httpServer.ListenAndServeTLS(cfg.RPCCert, cfg.RPCKey); err != nil {

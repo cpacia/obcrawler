@@ -5,10 +5,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/gcash/bchutil"
 	"github.com/jessevdk/go-flags"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"io"
+	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,6 +22,7 @@ import (
 const (
 	defaultConfigFilename = "obcrawler.conf"
 	defaultLogFilename    = "crawler.log"
+	defaultGrpcPort       = "5001"
 )
 
 var log = logging.MustGetLogger("REPO")
@@ -57,7 +61,7 @@ type Config struct {
 	ShowVersion        bool          `short:"v" long:"version" description:"Display version information and exit"`
 	ConfigFile         string        `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir            string        `short:"d" long:"datadir" description:"Directory to store data"`
-	CrawlInterval      time.Duration `long:"crawlinterval" description:"The amount of time to wait between network crawls" default:"1m"`
+	CrawlInterval      time.Duration `long:"crawlinterval" description:"The amount of time to wait between network crawls" default:"5m"`
 	LogDir             string        `long:"logdir" description:"Directory to log output."`
 	LogLevel           string        `short:"l" long:"loglevel" description:"Set the logging level [debug, info, notice, warning, error, critical]." default:"info"`
 	BoostrapAddrs      []string      `long:"bootstrapaddr" description:"Override the default bootstrap addresses with the provided values"`
@@ -68,10 +72,11 @@ type Config struct {
 	DisableDataCaching bool          `long:"disabledatacaching" description:"By default the crawler will download, cache, and seed images and ratings. This functionality can be disabled with this flag."`
 	DisableFilePinning bool          `long:"diablefilepinning" description:"By default the crawler will pin all files it downloads until the file is replaced by another one."`
 
-	RPCCert       string `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
-	RPCKey        string `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
-	GrpcListener  string `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
-	GrpcAuthToken string `long:"grpcauthtoken" description:"Set a token here if you want to enable client authentication with gRPC"`
+	RPCCert       string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
+	RPCKey        string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
+	ExternalIPs   []string `long:"externalips" description:"This option should be used to specify the external IP address if using the auto-generated SSL certificate"`
+	GrpcListeners []string `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
+	GrpcAuthToken string   `long:"grpcauthtoken" description:"Set a token here if you want to enable client authentication with gRPC"`
 
 	DBDialect string `long:"dbdialect" description:"The type of database to use [sqlite3, mysql, postgress]" default:"sqlite3"`
 	DBHost    string `long:"dbhost" description:"The host:post location of the database."`
@@ -166,11 +171,6 @@ func LoadConfig() (*Config, error) {
 		return nil, errors.New("invalid log level")
 	}
 
-	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
-	if cfg.LogDir == "" {
-		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs"))
-	}
-
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid
 	// options.  Note this should go directly before the return.
@@ -178,6 +178,37 @@ func LoadConfig() (*Config, error) {
 		log.Errorf("%v", configFileError)
 	}
 	setupLogging(cfg.LogDir, cfg.LogLevel)
+
+	// Default RPC to listen on localhost only.
+	if len(cfg.GrpcListeners) == 0 {
+		addrs, err := net.LookupHost("localhost")
+		if err != nil {
+			return nil, err
+		}
+		cfg.GrpcListeners = make([]string, 0, len(addrs))
+		for _, addr := range addrs {
+			addr = net.JoinHostPort(addr, defaultGrpcPort)
+			cfg.GrpcListeners = append(cfg.GrpcListeners, addr)
+		}
+	}
+
+	if cfg.RPCCert == "" && cfg.RPCKey == "" {
+		cfg.RPCCert = path.Join(cfg.DataDir, "rpc.cert")
+		cfg.RPCKey = path.Join(cfg.DataDir, "rpc.key")
+	}
+
+	if !fileExists(cfg.RPCKey) && !fileExists(cfg.RPCCert) {
+		err := genCertPair(cfg.RPCCert, cfg.RPCKey, cfg.ExternalIPs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	cfg.DataDir = cleanAndExpandPath(cfg.DataDir)
+	if cfg.LogDir == "" {
+		cfg.LogDir = cleanAndExpandPath(path.Join(cfg.DataDir, "logs"))
+	}
+
 	return &cfg, nil
 }
 
@@ -273,4 +304,38 @@ func setupLogging(logDir, logLevel string) {
 		logging.SetBackend(backendStdoutFormatter)
 	}
 	logging.SetLevel(LogLevelMap[strings.ToLower(logLevel)], "")
+}
+
+// genCertPair generates a key/cert pair to the paths provided.
+func genCertPair(certFile, keyFile string, externalIPs []string) error {
+	log.Infof("Generating TLS certificates...")
+
+	org := "obcrawler autogenerated cert"
+	validUntil := time.Now().Add(10 * 365 * 24 * time.Hour)
+	cert, key, err := bchutil.NewTLSCertPair(org, validUntil, externalIPs)
+	if err != nil {
+		return err
+	}
+
+	// Write cert and key files.
+	if err = ioutil.WriteFile(certFile, cert, 0666); err != nil {
+		return err
+	}
+	if err = ioutil.WriteFile(keyFile, key, 0600); err != nil {
+		os.Remove(certFile)
+		return err
+	}
+
+	log.Infof("Done generating TLS certificates")
+	return nil
+}
+
+// filesExists reports whether the named file or directory exists.
+func fileExists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }

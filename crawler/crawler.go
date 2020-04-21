@@ -121,8 +121,8 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		return nil, err
 	}
 
-	if cfg.GrpcListener != "" {
-		netAddrs, err := parseListeners([]string{cfg.GrpcListener})
+	if len(cfg.GrpcListeners) > 0 {
+		netAddrs, err := parseListeners(cfg.GrpcListeners)
 		if err != nil {
 			return nil, err
 		}

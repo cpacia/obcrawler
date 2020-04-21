@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"github.com/cpacia/obcrawler/rpc/pb"
 	"github.com/cpacia/openbazaar3.0/models"
 	"github.com/golang/protobuf/ptypes"
@@ -174,7 +175,7 @@ func (s *GrpcServer) Subscribe(req *pb.SubscribeRequest, stream pb.Obcrawler_Sub
 }
 
 // CrawlNode queues up a crawl of the given node.
-func (s *GrpcServer) CrawlNode(req *pb.CrawlNodeRequest) (*pb.CrawlNodeResponse, error) {
+func (s *GrpcServer) CrawlNode(ctx context.Context, req *pb.CrawlNodeRequest) (*pb.CrawlNodeResponse, error) {
 	pid, err := peer.IDB58Decode(req.Peer)
 	if err != nil {
 		return nil, err
@@ -184,7 +185,7 @@ func (s *GrpcServer) CrawlNode(req *pb.CrawlNodeRequest) (*pb.CrawlNodeResponse,
 
 // BanNode will prevent the node from being crawled in the future as
 // well as purge all cached/pinned files of this node from the crawler.
-func (s *GrpcServer) BanNode(req *pb.BanNodeRequest) (*pb.BanNodeResponse, error) {
+func (s *GrpcServer) BanNode(ctx context.Context, req *pb.BanNodeRequest) (*pb.BanNodeResponse, error) {
 	pid, err := peer.IDB58Decode(req.Peer)
 	if err != nil {
 		return nil, err
@@ -194,7 +195,7 @@ func (s *GrpcServer) BanNode(req *pb.BanNodeRequest) (*pb.BanNodeResponse, error
 
 // UnbanNode will un-ban the provided node. It will not immediately
 // crawl the node again. If you want that call CrawlNode.
-func (s *GrpcServer) UnbanNde(req *pb.UnbanNodeRequest) (*pb.UnbanNodeResponse, error) {
+func (s *GrpcServer) UnbanNode(ctx context.Context, req *pb.UnbanNodeRequest) (*pb.UnbanNodeResponse, error) {
 	pid, err := peer.IDB58Decode(req.Peer)
 	if err != nil {
 		return nil, err

@@ -26,7 +26,7 @@ service obcrawler {
 
     // UnbanNode will un-ban the provided node. It will not immediately
     // crawl the node again. If you want that call CrawlNode.
-    rpc UnBanNode(UnbanNodeRequest) returns (UnbanNodeResponse) {}
+    rpc UnbanNode(UnbanNodeRequest) returns (UnbanNodeResponse) {}
 }
 
 // RPC MESSAGES
