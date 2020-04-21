@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cpacia/obcrawler/repo"
+	"github.com/cpacia/obcrawler/rpc"
 	"github.com/cpacia/openbazaar3.0/core"
 	obrepo "github.com/cpacia/openbazaar3.0/repo"
 	"github.com/ipfs/go-cid"
@@ -37,12 +38,13 @@ type Crawler struct {
 	workChan      chan *Job
 	cacheData     bool
 	pinFiles      bool
-	subs          map[uint64]*Subscription
+	subs          map[uint64]*rpc.Subscription
 	subMtx        sync.RWMutex
 	db            *repo.Database
 	ctx           context.Context
 	cancel        context.CancelFunc
 	crawlInterval time.Duration
+	grpcServer    *rpc.GrpcServer
 	shutdown      chan struct{}
 }
 
@@ -52,7 +54,7 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		ctx:           ctx,
 		cancel:        cancel,
 		workChan:      make(chan *Job),
-		subs:          make(map[uint64]*Subscription),
+		subs:          make(map[uint64]*rpc.Subscription),
 		subMtx:        sync.RWMutex{},
 		cacheData:     !cfg.DisableDataCaching,
 		pinFiles:      !cfg.DisableFilePinning,
@@ -119,6 +121,17 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		return nil, err
 	}
 
+	if cfg.GrpcListener != "" {
+		netAddrs, err := parseListeners([]string{cfg.GrpcListener})
+		if err != nil {
+			return nil, err
+		}
+		crawler.grpcServer, err = newGrpcServer(netAddrs, crawler, cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return crawler, nil
 }
 
@@ -177,7 +190,7 @@ func (c *Crawler) BanNode(pid peer.ID) error {
 	return nil
 }
 
-func (c *Crawler) UnBanNode(pid peer.ID) error {
+func (c *Crawler) UnbanNode(pid peer.ID) error {
 	return c.db.Update(func(db *gorm.DB) error {
 		var peer repo.Peer
 		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
@@ -190,10 +203,10 @@ func (c *Crawler) UnBanNode(pid peer.ID) error {
 	})
 }
 
-func (c *Crawler) Subscribe() (*Subscription, error) {
+func (c *Crawler) Subscribe() (*rpc.Subscription, error) {
 	i := mrand.Uint64()
-	sub := &Subscription{
-		Out: make(chan *Object),
+	sub := &rpc.Subscription{
+		Out: make(chan *rpc.Object),
 		Close: func() error {
 			c.subMtx.Lock()
 			defer c.subMtx.Unlock()

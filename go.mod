@@ -5,6 +5,8 @@ go 1.13
 require (
 	github.com/cpacia/openbazaar3.0 v0.0.0-20200223054505-bc325264f6b3
 	github.com/gogo/protobuf v1.2.1
+	github.com/golang/protobuf v1.3.2
+	github.com/improbable-eng/grpc-web v0.9.1
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-ipfs v0.4.23
 	github.com/ipfs/go-ipfs-files v0.0.3
@@ -22,6 +24,7 @@ require (
 	github.com/libp2p/go-libp2p-routing v0.0.1
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
+	google.golang.org/grpc v1.25.1
 )
 
 replace github.com/lightninglabs/neutrino => github.com/lightninglabs/neutrino v0.11.0

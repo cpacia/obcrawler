@@ -1,4 +1,4 @@
-package crawler
+package rpc
 
 import "time"
 

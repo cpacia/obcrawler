@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cpacia/obcrawler/repo"
+	"github.com/cpacia/obcrawler/rpc"
 	"github.com/cpacia/openbazaar3.0/core/coreiface"
 	"github.com/cpacia/openbazaar3.0/models"
 	"github.com/gogo/protobuf/proto"
@@ -46,6 +47,7 @@ func (c *Crawler) worker() {
 			// The time gets updated regardless of whether the crawl succeeds or not so we don't
 			// repeat the crawls over and over if there's a failure.
 			func() {
+				log.Debugf("Starting crawl of peer %s", job.Peer.Pretty())
 				start := time.Now()
 				defer func() {
 					err := c.db.Update(func(db *gorm.DB) error {
@@ -58,7 +60,7 @@ func (c *Crawler) worker() {
 						return db.Save(&peer).Error
 					})
 					if err != nil {
-						log.Errorf("Error saving last crawled time: %s", err)
+						log.Errorf("Error saving last crawled time for peer %s: %s", job.Peer.Pretty(), err)
 					}
 					log.Debugf("Crawl of %s finished in %s", job.Peer.Pretty(), time.Since(start))
 				}()
@@ -83,6 +85,7 @@ func (c *Crawler) worker() {
 					}
 					job.Expiration = eol
 					if bytes.Equal(rec.GetValue(), job.LastKnownVal) {
+						log.Debugf("IPNS record for peer %s is unchanged", job.Peer.Pretty())
 						return
 					}
 				}
@@ -130,7 +133,7 @@ func (c *Crawler) worker() {
 							// Send the found profile to subscribers.
 							c.subMtx.RLock()
 							for _, sub := range c.subs {
-								sub.Out <- &Object{
+								sub.Out <- &rpc.Object{
 									ExpirationDate: job.Expiration,
 									Data:           &profile,
 								}
@@ -182,7 +185,7 @@ func (c *Crawler) worker() {
 								// Send the found listing to the subscribers.
 								c.subMtx.RLock()
 								for _, sub := range c.subs {
-									sub.Out <- &Object{
+									sub.Out <- &rpc.Object{
 										ExpirationDate: job.Expiration,
 										Data:           listing,
 									}
@@ -234,12 +237,12 @@ func (c *Crawler) worker() {
 				// 5) Delete CIDs not carrying forward from the db.
 				var (
 					oldCIDs []repo.CIDRecord
-					newCIDs= make(map[string]bool)
+					newCIDs = make(map[string]bool)
 				)
 				err = c.db.Update(func(db *gorm.DB) error {
 					err := db.Where("peer_id=?", job.Peer.Pretty()).Find(&oldCIDs).Error
 					if err != nil && !gorm.IsRecordNotFoundError(err) {
-						log.Errorf("Error loading current CIDs from DB: %s", err)
+						log.Errorf("Error loading current CIDs from DB for peer %s: %s", job.Peer.Pretty(), err)
 					}
 
 					// Root CID is added to the new map.
@@ -310,7 +313,7 @@ func (c *Crawler) worker() {
 
 				capi, err := coreapi.NewCoreAPI(c.nodes[r].IPFSNode())
 				if err != nil {
-					log.Warningf("Error loading core API: %s", err)
+					log.Warningf("Error loading core API during crawl of %s: %s", job.Peer.Pretty(), err)
 					return
 				}
 
@@ -321,13 +324,13 @@ func (c *Crawler) worker() {
 						defer cancel()
 						id, err := cid.Decode(idStr)
 						if err != nil {
-							log.Errorf("Error decoding CID for pinning: %s", err)
+							log.Errorf("Error decoding CID for pinning, peer %s: %s", job.Peer.Pretty(), err)
 							continue
 						}
 						// If we already have this file this should just return immediately.
 						// Otherwise it will be downloaded and pinned.
 						if err := capi.Pin().Add(ctx, path.IpfsPath(id)); err != nil {
-							log.Errorf("Error pinning file %s: %s", id, err)
+							log.Errorf("Error pinning file %s for peer %s: %s", id, job.Peer.Pretty(), err)
 						}
 					}
 				}
@@ -337,18 +340,18 @@ func (c *Crawler) worker() {
 					if !newCIDs[rec.CID] {
 						id, err := cid.Decode(rec.CID)
 						if err != nil {
-							log.Errorf("Error decoding CID for unpinning: %s", err)
+							log.Errorf("Error decoding CID for unpinning, peer %s: %s", job.Peer.Pretty(), err)
 							continue
 						}
 						err = c.unpinCID(id)
 						if err != nil {
-							log.Errorf("Error unpinning file %s: %s", id, err)
+							log.Errorf("Error unpinning file %s for peer %s: %s", id, job.Peer.Pretty(), err)
 						} else {
 							err = c.db.Update(func(db *gorm.DB) error {
 								return db.Where("c_id = ?", id.String()).Delete(&repo.CIDRecord{}).Error
 							})
 							if err != nil {
-								log.Errorf("Error deleting unpinned CID from db: %s", err)
+								log.Errorf("Error deleting unpinned CID from db, peer %s: %s", job.Peer.Pretty(), err)
 							}
 						}
 					}
