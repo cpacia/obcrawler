@@ -211,7 +211,11 @@ func (c *Crawler) Subscribe() (*rpc.Subscription, error) {
 			c.subMtx.Lock()
 			defer c.subMtx.Unlock()
 
-			delete(c.subs, i)
+			s, ok := c.subs[i]
+			if ok {
+				close(s.Out)
+				delete(c.subs, i)
+			}
 			return nil
 		},
 	}
@@ -305,6 +309,14 @@ func (c *Crawler) Stop() error {
 		}
 	}
 	return nil
+}
+
+func (c *Crawler) notifySubscribers(obj *rpc.Object) {
+	c.subMtx.RLock()
+	for _, sub := range c.subs {
+		sub.Out <- obj
+	}
+	c.subMtx.RUnlock()
 }
 
 func (c *Crawler) unpinCID(id cid.Cid) error {

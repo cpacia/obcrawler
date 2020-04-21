@@ -39,9 +39,7 @@ var (
 	}
 
 	DefaultMainnetBootstrapAddrs = []string{
-		"/ip4/167.172.126.176/tcp/4001/p2p/12D3KooW9qYCthfQAwxnuW62ZTN8uoKBfRkt5a2bcKJWR5aDwta6",
-		"/ip4/167.172.126.176/tcp/4003/p2p/12D3KooWMQQit1oHAHoNkRGZ4S1SeJJVPB2XBHyfdVdW7QdiwHXf",
-		"/ip4/167.172.126.176/tcp/4005/p2p/12D3KooWPQ8xy3Z3UKSTRz1oGGKkE6u4J9dQegDLyfgzjTgkrPYx",
+		"/ip4/167.172.126.176/tcp/4001/p2p/12D3KooWPZ3xBNRGx4fhRbfYAcXUhcZhTZ2LCkJ74kJXGfz9TVLT",
 	}
 
 	defaultTestnetBootstrapAddrs = []string{

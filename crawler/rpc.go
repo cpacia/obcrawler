@@ -115,6 +115,7 @@ func validateAuthenticationToken(ctx context.Context) error {
 	}
 	return nil
 }
+
 // parseListeners determines whether each listen address is IPv4 and IPv6 and
 // returns a slice of appropriate net.Addrs to listen on with TCP. It also
 // properly detects addresses which apply to "all interfaces" and adds the

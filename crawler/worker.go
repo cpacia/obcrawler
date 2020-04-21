@@ -131,14 +131,10 @@ func (c *Crawler) worker() {
 							log.Debugf("Crawled profile for peer %s", job.Peer.Pretty())
 
 							// Send the found profile to subscribers.
-							c.subMtx.RLock()
-							for _, sub := range c.subs {
-								sub.Out <- &rpc.Object{
-									ExpirationDate: job.Expiration,
-									Data:           &profile,
-								}
-							}
-							c.subMtx.RUnlock()
+							c.notifySubscribers(&rpc.Object{
+								ExpirationDate: job.Expiration,
+								Data:           &profile,
+							})
 
 							// If we're caching data then add the image hashes to the image slice.
 							if c.cacheData {
@@ -183,14 +179,10 @@ func (c *Crawler) worker() {
 								log.Debugf("Crawled listing %s for peer %s", listing.Cid, job.Peer.Pretty())
 
 								// Send the found listing to the subscribers.
-								c.subMtx.RLock()
-								for _, sub := range c.subs {
-									sub.Out <- &rpc.Object{
-										ExpirationDate: job.Expiration,
-										Data:           listing,
-									}
-								}
-								c.subMtx.RUnlock()
+								c.notifySubscribers(&rpc.Object{
+									ExpirationDate: job.Expiration,
+									Data:           listing,
+								})
 
 								// If we're caching data then add the image hashes to the image slice.
 								if c.cacheData {
@@ -286,6 +278,9 @@ func (c *Crawler) worker() {
 					}
 					// Each image CID is added to the new map.
 					for _, id := range images {
+						if _, err := cid.Decode(id); err != nil {
+							continue
+						}
 						if err := db.Save(&repo.CIDRecord{
 							CID:    id,
 							PeerID: job.Peer.Pretty(),
@@ -296,6 +291,9 @@ func (c *Crawler) worker() {
 					}
 					// Each rating CID is added to the new map.
 					for _, id := range ratings {
+						if _, err := cid.Decode(id); err != nil {
+							continue
+						}
 						if err := db.Save(&repo.CIDRecord{
 							CID:    id,
 							PeerID: job.Peer.Pretty(),
