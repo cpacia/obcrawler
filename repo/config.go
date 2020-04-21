@@ -53,22 +53,23 @@ var (
 //
 // See loadConfig for details on the configuration load process.
 type Config struct {
-	NumNodes            uint          `short:"n" long:"nodes" description:"Number of IPFS nodes to spin up." default:"10"`
-	NumWorkers          uint          `short:"w" long:"workers" description:"Number of workers to use when crawling nodes" default:"12"`
-	PubsubNodes         uint          `short:"p" long:"pubsubnodes" description:"Number of pubsub nodes to listen on." default:"3"`
-	ShowVersion         bool          `short:"v" long:"version" description:"Display version information and exit"`
-	ConfigFile          string        `short:"C" long:"configfile" description:"Path to configuration file"`
-	DataDir             string        `short:"d" long:"datadir" description:"Directory to store data"`
-	CrawlInterval       time.Duration `long:"crawlinterval" description:"The amount of time to wait between network crawls" default:"1m"`
-	LogDir              string        `long:"logdir" description:"Directory to log output."`
-	LogLevel            string        `short:"l" long:"loglevel" description:"Set the logging level [debug, info, notice, warning, error, critical]." default:"info"`
-	BoostrapAddrs       []string      `long:"bootstrapaddr" description:"Override the default bootstrap addresses with the provided values"`
-	Testnet             bool          `short:"t" long:"testnet" description:"Use the test network"`
-	DisableNATPortMap   bool          `long:"noupnp" description:"Disable use of upnp."`
-	IPNSQuorum          uint          `long:"ipnsquorum" description:"The size of the IPNS quorum to use. Smaller is faster but less up-to-date." default:"2"`
-	UserAgentComment    string        `long:"uacomment" description:"Comment to add to the user agent."`
-	DisableImageCaching bool          `long:"disableimagecaching" description:"By default the crawler will download, cache, and seed images. This functionality can be disabled with this flag."`
-	GrpcListener        string        `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
+	NumNodes           uint          `short:"n" long:"nodes" description:"Number of IPFS nodes to spin up." default:"10"`
+	NumWorkers         uint          `short:"w" long:"workers" description:"Number of workers to use when crawling nodes" default:"12"`
+	PubsubNodes        uint          `short:"p" long:"pubsubnodes" description:"Number of pubsub nodes to listen on." default:"3"`
+	ShowVersion        bool          `short:"v" long:"version" description:"Display version information and exit"`
+	ConfigFile         string        `short:"C" long:"configfile" description:"Path to configuration file"`
+	DataDir            string        `short:"d" long:"datadir" description:"Directory to store data"`
+	CrawlInterval      time.Duration `long:"crawlinterval" description:"The amount of time to wait between network crawls" default:"1m"`
+	LogDir             string        `long:"logdir" description:"Directory to log output."`
+	LogLevel           string        `short:"l" long:"loglevel" description:"Set the logging level [debug, info, notice, warning, error, critical]." default:"info"`
+	BoostrapAddrs      []string      `long:"bootstrapaddr" description:"Override the default bootstrap addresses with the provided values"`
+	Testnet            bool          `short:"t" long:"testnet" description:"Use the test network"`
+	DisableNATPortMap  bool          `long:"noupnp" description:"Disable use of upnp."`
+	IPNSQuorum         uint          `long:"ipnsquorum" description:"The size of the IPNS quorum to use. Smaller is faster but less up-to-date." default:"2"`
+	UserAgentComment   string        `long:"uacomment" description:"Comment to add to the user agent."`
+	DisableDataCaching bool          `long:"disableimagecaching" description:"By default the crawler will download, cache, and seed images and ratings. This functionality can be disabled with this flag."`
+	DisableFilePinning bool          `long:"diablefilepinning" description:"By default the crawler will pin all files it downloads until the file is replaced by another one."`
+	GrpcListener       string        `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
 
 	DBDialect string `long:"dbdialect" description:"The type of database to use [sqlite3, mysql, postgress]" default:"sqlite3"`
 	DBHost    string `long:"dbhost" description:"The host:post location of the database."`

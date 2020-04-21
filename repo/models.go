@@ -6,10 +6,10 @@ type Peer struct {
 	PeerID         string `gorm:"primary_key"`
 	FirstSeen      time.Time
 	LastSeen       time.Time
-	LastCrawled    time.Time
-	IPNSExpiration time.Time
+	LastCrawled    time.Time `gorm:"index"`
+	IPNSExpiration time.Time `gorm:"index"`
 	IPNSRecord     []byte
-	Banned         bool
+	Banned         bool `gorm:"index"`
 }
 
 type CIDRecord struct {

@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package pb;
+
+import "google/protobuf/timestamp.proto";
+
+service obcrawler {
+    rpc Subscribe (SubscribeRequest) returns (stream UserData) {}
+    rpc CrawlNode(CrawlNodeRequest) returns (CrawlNodeResponse) {}
+    rpc BanNode(BanNodeRequest) returns (BanNodeResponse) {}
+    rpc UnBanNode(UnBanNodeRequest) returns (UnBanNodeResponse) {}
+}
+
+message SubscribeRequest {}
+
+message UserData {
+    oneof data {
+        Profile profile = 1;
+        SignedListing listing = 2;
+    }
+    google.protobuf.Timestamp expiration = 3;
+}

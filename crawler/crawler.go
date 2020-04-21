@@ -10,6 +10,9 @@ import (
 	obrepo "github.com/cpacia/openbazaar3.0/repo"
 	"github.com/ipfs/go-cid"
 	core2 "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/corerepo"
+	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	"github.com/jinzhu/gorm"
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	inet "github.com/libp2p/go-libp2p-net"
@@ -32,7 +35,8 @@ type Crawler struct {
 	numWorkers    uint
 	ipnsQuorum    uint
 	workChan      chan *Job
-	cacheImages   bool
+	cacheData     bool
+	pinFiles      bool
 	subs          map[uint64]*Subscription
 	subMtx        sync.RWMutex
 	db            *repo.Database
@@ -50,7 +54,8 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		workChan:      make(chan *Job),
 		subs:          make(map[uint64]*Subscription),
 		subMtx:        sync.RWMutex{},
-		cacheImages:   !cfg.DisableImageCaching,
+		cacheData:     !cfg.DisableDataCaching,
+		pinFiles:      !cfg.DisableFilePinning,
 		numPubsub:     cfg.PubsubNodes,
 		numWorkers:    cfg.NumWorkers,
 		ipnsQuorum:    cfg.IPNSQuorum,
@@ -117,24 +122,72 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 	return crawler, nil
 }
 
-func (c *Crawler) CrawlNode(peer peer.ID) error {
+func (c *Crawler) CrawlNode(pid peer.ID) error {
+	err := c.db.View(func(db *gorm.DB) error {
+		var peer repo.Peer
+		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
+		if err != nil && !gorm.IsRecordNotFoundError(err) {
+			return err
+		}
+		if peer.Banned {
+			return errors.New("peer is banned")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	go func() {
+		c.workChan <- &Job{
+			Peer: pid,
+		}
+	}()
 	return nil
 }
 
-func (c *Crawler) BanNode(peer peer.ID) error {
+func (c *Crawler) BanNode(pid peer.ID) error {
+	var cidsRecs []repo.CIDRecord
+	err := c.db.Update(func(db *gorm.DB) error {
+		var peer repo.Peer
+		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
+		if err != nil && !gorm.IsRecordNotFoundError(err) {
+			return err
+		}
+		peer.PeerID = pid.String()
+		peer.Banned = true
+		if err := db.Save(&peer).Error; err != nil {
+			return err
+		}
+		return db.Where("peer_id=?", pid.Pretty()).Find(&cidsRecs).Error
+	})
+	if err != nil {
+		return err
+	}
+	for _, rec := range cidsRecs {
+		id, err := cid.Decode(rec.CID)
+		if err != nil {
+			continue
+		}
+
+		if err := c.unpinCID(id); err != nil {
+			log.Error("Error unpinning data for banned node %s: %s", pid.String(), err)
+		}
+	}
+
 	return nil
 }
 
-func (c *Crawler) UnBanNode(peer peer.ID) error {
-	return nil
-}
-
-func (c *Crawler) BanData(cid cid.Cid) error {
-	return nil
-}
-
-func (c *Crawler) UnBanData(cid cid.Cid) error {
-	return nil
+func (c *Crawler) UnBanNode(pid peer.ID) error {
+	return c.db.Update(func(db *gorm.DB) error {
+		var peer repo.Peer
+		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
+		if err != nil && !gorm.IsRecordNotFoundError(err) {
+			return err
+		}
+		peer.PeerID = pid.String()
+		peer.Banned = false
+		return db.Save(&peer).Error
+	})
 }
 
 func (c *Crawler) Subscribe() (*Subscription, error) {
@@ -164,10 +217,12 @@ func (c *Crawler) Start() error {
 		c.listenPeers(n.IPFSNode())
 	}
 	go func() {
-		ticker := time.NewTicker(c.crawlInterval)
+		crawlTicker := time.NewTicker(c.crawlInterval)
+		gcTicker := time.NewTicker(time.Hour * 24)
+		oldNodeTicker := time.NewTicker(time.Minute)
 		for {
 			select {
-			case <-ticker.C:
+			case <-crawlTicker.C:
 				r := mrand.Intn(len(c.nodes))
 				_, pub, err := crypto.GenerateEd25519Key(rand.Reader)
 				if err != nil {
@@ -184,7 +239,40 @@ func (c *Crawler) Start() error {
 				if err != routing.ErrNotFound {
 					log.Errorf("Error crawling for more peers %s", err)
 				}
+			case <-gcTicker.C:
+				for _, n := range c.nodes {
+					corerepo.GarbageCollectAsync(n.IPFSNode(), c.ctx)
+				}
+			case <-oldNodeTicker.C:
+				var peers []repo.Peer
+				err := c.db.View(func(db *gorm.DB) error {
+					return db.Where("banned=?", false).
+						Where("ip_ns_expiration<?", time.Now()).
+						Where("last_crawled<?", time.Now().Add(-time.Hour*24*7)).
+						Order("last_crawled asc").
+						Limit(10).
+						Find(&peers).Error
+				})
+				if err != nil && !gorm.IsRecordNotFoundError(err) {
+					log.Errorf("Error crawling loading old peers %s", err)
+					continue
+				}
+				go func() {
+					for _, p := range peers {
+						pid, err := peer.IDB58Decode(p.PeerID)
+						if err != nil {
+							log.Errorf("Error decoding peerID in old node loop: %s", err)
+							continue
+						}
+						c.workChan <- &Job{
+							Peer: pid,
+						}
+					}
+				}()
 			case <-c.shutdown:
+				crawlTicker.Stop()
+				gcTicker.Stop()
+				oldNodeTicker.Stop()
 				return
 			}
 		}
@@ -202,6 +290,17 @@ func (c *Crawler) Stop() error {
 		if err := n.Stop(false); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *Crawler) unpinCID(id cid.Cid) error {
+	for _, n := range c.nodes {
+		capi, err := coreapi.NewCoreAPI(n.IPFSNode())
+		if err != nil {
+			return err
+		}
+		capi.Pin().Rm(c.ctx, ipath.IpfsPath(id))
 	}
 	return nil
 }
