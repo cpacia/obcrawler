@@ -289,6 +289,16 @@ func (c *Crawler) worker() {
 						}
 						newCIDs[id] = true
 					}
+					// Rating Index CID is added to the new map.
+					if ratingsLink != nil {
+						if err := db.Save(&repo.CIDRecord{
+							CID:    ratingsLink.Cid.String(),
+							PeerID: job.Peer.Pretty(),
+						}).Error; err != nil {
+							return err
+						}
+						newCIDs[ratingsLink.Cid.String()] = true
+					}
 					// Each rating CID is added to the new map.
 					for _, id := range ratings {
 						if _, err := cid.Decode(id); err != nil {
@@ -334,6 +344,7 @@ func (c *Crawler) worker() {
 				}
 
 				// If the old CID is not carrying forward, unpin and delete from the db.
+				var toDelete []string
 				for _, rec := range oldCIDs {
 					if !newCIDs[rec.CID] {
 						id, err := cid.Decode(rec.CID)
@@ -345,15 +356,19 @@ func (c *Crawler) worker() {
 						if err != nil {
 							log.Errorf("Error unpinning file %s for peer %s: %s", id, job.Peer.Pretty(), err)
 						} else {
-							err = c.db.Update(func(db *gorm.DB) error {
-								return db.Where("c_id = ?", id.String()).Delete(&repo.CIDRecord{}).Error
-							})
-							if err != nil {
-								log.Errorf("Error deleting unpinned CID from db, peer %s: %s", job.Peer.Pretty(), err)
-							}
+							toDelete = append(toDelete, rec.CID)
 						}
 					}
 				}
+				c.db.Update(func(db *gorm.DB) error {
+					for _, id := range toDelete {
+						err = db.Where("c_id = ?", id).Delete(&repo.CIDRecord{}).Error
+						if err != nil {
+							log.Errorf("Error deleting CID record for peer %s: %s", job.Peer.Pretty(), err)
+						}
+					}
+					return nil
+				})
 			}()
 		}
 	}

@@ -281,6 +281,7 @@ func (c *Crawler) Start() error {
 					return db.Where("banned=?", false).
 						Where("ip_ns_expiration<?", time.Now()).
 						Where("last_crawled<?", time.Now().Add(-time.Hour*24*7)).
+						Where("last_seen>?", time.Now().Add(-time.Hour*24*90)).
 						Order("last_crawled asc").
 						Limit(10).
 						Find(&peers).Error
