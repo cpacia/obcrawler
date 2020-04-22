@@ -115,13 +115,8 @@ func (c *Crawler) worker() {
 					log.Warningf("Error resolving listings link for peer %s: %s", job.Peer.Pretty(), err)
 					return
 				}
-				ratingsLink, _, err := nd.ResolveLink([]string{"ratings.json"})
-				if err != nil && err != merkledag.ErrLinkNotFound {
-					log.Warningf("Error resolving ratings link for peer %s: %s", job.Peer.Pretty(), err)
-				}
 
 				// If the profile link exists, crawl the profile.
-				var images []string
 				if profileLink != nil {
 					profileBytes, err := c.cat(c.ctx, c.nodes[r].IPFSNode(), path.IpfsPath(profileLink.Cid))
 					if err == nil {
@@ -131,25 +126,10 @@ func (c *Crawler) worker() {
 							log.Debugf("Crawled profile for peer %s", job.Peer.Pretty())
 
 							// Send the found profile to subscribers.
-							c.notifySubscribers(&rpc.Object{
+							defer c.notifySubscribers(&rpc.Object{
 								ExpirationDate: job.Expiration,
 								Data:           &profile,
 							})
-
-							// If we're caching data then add the image hashes to the image slice.
-							if c.cacheData {
-								images = append(images,
-									profile.AvatarHashes.Original,
-									profile.AvatarHashes.Large,
-									profile.AvatarHashes.Medium,
-									profile.AvatarHashes.Small,
-									profile.AvatarHashes.Tiny,
-									profile.HeaderHashes.Original,
-									profile.HeaderHashes.Large,
-									profile.HeaderHashes.Medium,
-									profile.HeaderHashes.Small,
-									profile.HeaderHashes.Tiny)
-							}
 						}
 					}
 				}
@@ -167,7 +147,7 @@ func (c *Crawler) worker() {
 							for _, listing := range listingIndex {
 								id, err := cid.Decode(listing.CID)
 								if err != nil {
-									log.Errorf("Error decoding CID: %s", err)
+									log.Errorf("Error decoding CID for peer %s: %s", job.Peer.Pretty(), err)
 									continue
 								}
 								newListings = append(newListings, listing.CID)
@@ -179,45 +159,37 @@ func (c *Crawler) worker() {
 								log.Debugf("Crawled listing %s for peer %s", listing.Cid, job.Peer.Pretty())
 
 								// Send the found listing to the subscribers.
-								c.notifySubscribers(&rpc.Object{
+								defer c.notifySubscribers(&rpc.Object{
 									ExpirationDate: job.Expiration,
 									Data:           listing,
 								})
-
-								// If we're caching data then add the image hashes to the image slice.
-								if c.cacheData {
-									for _, image := range listing.Listing.Item.Images {
-										images = append(images,
-											image.Original,
-											image.Large,
-											image.Medium,
-											image.Small,
-											image.Tiny)
-									}
-								}
 							}
 						}
 					}
 				}
 
-				// If the rating link exists, crawl the ratings. Note that we don't
-				// index ratings. This is purely for caching purposes to make sure
-				// they remain available on the network.
-				var ratings []string
-				if ratingsLink != nil && c.cacheData {
-					ratingsBytes, err := c.cat(c.ctx, c.nodes[r].IPFSNode(), path.IpfsPath(ratingsLink.Cid))
-					if err == nil {
-						var ratingIndex models.RatingIndex
-						err := json.Unmarshal(ratingsBytes, &ratingIndex)
-						if err == nil {
-							log.Debugf("Crawled rating index for peer %s", job.Peer.Pretty())
-
-							// At the rating CID to the ratings slice.
-							for _, item := range ratingIndex {
-								ratings = append(ratings, item.Ratings...)
-							}
-						}
+				// If cacheData is set then we will traverse the full graph for this node and
+				// download all cids under the root so that we can pin them.
+				var graph []cid.Cid
+				if c.cacheData {
+					graph, err = c.fetchGraph(c.nodes[r].IPFSNode(), &rootCID)
+					if err != nil {
+						log.Errorf("Error fetching graph for peer %s: %s", job.Peer.Pretty(), err)
 					}
+				}
+				graph = append(graph, rootCID)
+				if profileLink != nil {
+					graph = append(graph, profileLink.Cid)
+				}
+				if listingsLink != nil {
+					graph = append(graph, listingsLink.Cid)
+				}
+				for _, l := range newListings {
+					id, err := cid.Decode(l)
+					if err != nil {
+						continue
+					}
+					graph = append(graph, id)
 				}
 
 				// Finally we want to:
@@ -237,80 +209,16 @@ func (c *Crawler) worker() {
 						log.Errorf("Error loading current CIDs from DB for peer %s: %s", job.Peer.Pretty(), err)
 					}
 
-					// Root CID is added to the new map.
-					if err := db.Save(&repo.CIDRecord{
-						CID:    rootCID.String(),
-						PeerID: job.Peer.Pretty(),
-					}).Error; err != nil {
-						return err
-					}
-					newCIDs[rootCID.String()] = true
-
-					// Profile CID is added to the new map.
-					if profileLink != nil {
-						if err := db.Save(&repo.CIDRecord{
-							CID:    profileLink.Cid.String(),
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
+					for _, id := range graph {
+						if !newCIDs[id.String()] {
+							if err := db.Save(&repo.CIDRecord{
+								CID:    id.String(),
+								PeerID: job.Peer.Pretty(),
+							}).Error; err != nil {
+								return err
+							}
+							newCIDs[id.String()] = true
 						}
-						newCIDs[profileLink.Cid.String()] = true
-					}
-					// Listing Index CID is added to the new map.
-					if listingsLink != nil {
-						if err := db.Save(&repo.CIDRecord{
-							CID:    listingsLink.Cid.String(),
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
-						}
-						newCIDs[listingsLink.Cid.String()] = true
-					}
-					// Each listing CID is added to the new map.
-					for _, id := range newListings {
-						if err := db.Save(&repo.CIDRecord{
-							CID:    id,
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
-						}
-						newCIDs[id] = true
-					}
-					// Each image CID is added to the new map.
-					for _, id := range images {
-						if _, err := cid.Decode(id); err != nil {
-							continue
-						}
-						if err := db.Save(&repo.CIDRecord{
-							CID:    id,
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
-						}
-						newCIDs[id] = true
-					}
-					// Rating Index CID is added to the new map.
-					if ratingsLink != nil {
-						if err := db.Save(&repo.CIDRecord{
-							CID:    ratingsLink.Cid.String(),
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
-						}
-						newCIDs[ratingsLink.Cid.String()] = true
-					}
-					// Each rating CID is added to the new map.
-					for _, id := range ratings {
-						if _, err := cid.Decode(id); err != nil {
-							continue
-						}
-						if err := db.Save(&repo.CIDRecord{
-							CID:    id,
-							PeerID: job.Peer.Pretty(),
-						}).Error; err != nil {
-							return err
-						}
-						newCIDs[id] = true
 					}
 					return nil
 				})
@@ -464,4 +372,33 @@ func (c *Crawler) dagGet(ctx context.Context, n *core.IpfsNode, cid cid.Cid) (ip
 	}
 
 	return nd, nil
+}
+
+func (c *Crawler) fetchGraph(n *core.IpfsNode, id *cid.Cid) ([]cid.Cid, error) {
+	var (
+		ret []cid.Cid
+		m   = make(map[string]bool)
+	)
+	m[id.String()] = true
+	for {
+		if len(m) == 0 {
+			break
+		}
+		for k := range m {
+			i, err := cid.Decode(k)
+			if err != nil {
+				return ret, err
+			}
+			ret = append(ret, i)
+			links, err := c.dagGet(c.ctx, n, i)
+			if err != nil {
+				return ret, err
+			}
+			delete(m, k)
+			for _, link := range links.Links() {
+				m[link.Cid.String()] = true
+			}
+		}
+	}
+	return ret, nil
 }

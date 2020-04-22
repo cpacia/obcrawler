@@ -69,7 +69,7 @@ type Config struct {
 	DisableNATPortMap  bool          `long:"noupnp" description:"Disable use of upnp"`
 	IPNSQuorum         uint          `long:"ipnsquorum" description:"The size of the IPNS quorum to use. Smaller is faster but less up-to-date." default:"2"`
 	UserAgentComment   string        `long:"uacomment" description:"Comment to add to the user agent"`
-	DisableDataCaching bool          `long:"disabledatacaching" description:"By default the crawler will download, cache, and seed images and ratings. This functionality can be disabled with this flag."`
+	DisableDataCaching bool          `long:"disabledatacaching" description:"By default the crawler will download, cache, and seed node data including images and ratings. This functionality can be disabled with this flag."`
 	DisableFilePinning bool          `long:"diablefilepinning" description:"By default the crawler will pin all files it downloads until the file is replaced by another one."`
 
 	RPCCert       string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`

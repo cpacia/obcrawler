@@ -66,18 +66,20 @@ func TestCrawler_Subscribe(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer mn.TearDown()
+
 	eventSub, err := mn.Nodes()[2].SubscribeEvent(&events.PublishFinished{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imageHashes, err := mn.Nodes()[2].SetProductImage(pngImageB64, "item.png")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	done := make(chan struct{})
 	avatarHashes, err := mn.Nodes()[2].SetAvatarImage(jpgImageB64, done)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	imageHashes, err := mn.Nodes()[2].SetProductImage(pngImageB64, "item.png")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,22 +118,20 @@ func TestCrawler_Subscribe(t *testing.T) {
 		t.Fatal("Timed out waiting on publish")
 	}
 
-	time.Sleep(time.Second)
-
 	sub, err := crawler.Subscribe()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	listing := factory.NewPhysicalListing("shirt")
-	listing.Item.Images = append(listing.Item.Images, &pb.Listing_Item_Image{
+	listing.Item.Images[0] = &pb.Listing_Item_Image{
 		Original: imageHashes.Original,
 		Large:    imageHashes.Large,
 		Medium:   imageHashes.Medium,
 		Small:    imageHashes.Small,
 		Tiny:     imageHashes.Tiny,
 		Filename: imageHashes.Filename,
-	})
+	}
 	done2 := make(chan struct{})
 	if err := mn.Nodes()[2].SaveListing(listing, done2); err != nil {
 		t.Fatal(err)
@@ -143,8 +143,6 @@ func TestCrawler_Subscribe(t *testing.T) {
 		t.Fatal("Timed out waiting on listing publish")
 	}
 
-	// The profile will be sent a second time as the profile gets updated when
-	// the listing is saved.
 	select {
 	case obj := <-sub.Out:
 		pro, ok := obj.Data.(*models.Profile)
@@ -223,6 +221,8 @@ func TestCrawler_CrawlNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer mn.TearDown()
+
 	profile := &models.Profile{
 		Name: "Q",
 	}
@@ -249,6 +249,8 @@ func TestCrawler_BanNode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer mn.TearDown()
 
 	if err := crawler.BanNode(mn.Nodes()[2].Identity()); err != nil {
 		t.Fatal(err)
