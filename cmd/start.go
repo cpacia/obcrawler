@@ -10,13 +10,13 @@ import (
 
 var log = logging.MustGetLogger("CMD")
 
-// Start is the main entry point for openbazaar-go. The options to this
-// command are the same as the OpenBazaar node config options.
+// Start is the main entry point for the crawler. The options to this
+// command are the same as the crawler config options.
 type Start struct {
 	repo.Config
 }
 
-// Execute starts the OpenBazaar node.
+// Execute starts the crawler.
 func (x *Start) Execute(args []string) error {
 	cfg, err := repo.LoadConfig()
 	if err != nil {

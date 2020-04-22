@@ -51,9 +51,9 @@ var (
 	}
 )
 
-// Config defines the configuration options for OpenBazaar.
+// Config defines the configuration options for the crawler.
 //
-// See loadConfig for details on the configuration load process.
+// See LoadConfig for details on the configuration load process.
 type Config struct {
 	NumNodes           uint          `short:"n" long:"nodes" description:"Number of IPFS nodes to spin up." default:"10"`
 	NumWorkers         uint          `short:"w" long:"workers" description:"Number of workers to use when crawling nodes" default:"12"`

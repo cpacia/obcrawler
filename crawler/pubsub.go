@@ -120,7 +120,7 @@ func (c *Crawler) listenPubsub() error {
 				}
 				log.Debugf("Received new IPNS record from %s. Expiration %s", message.From().Pretty(), expiration)
 				go func() {
-					c.workChan <- &Job{
+					c.workChan <- &job{
 						Peer:       message.From(),
 						Expiration: expiration,
 						IPNSRecord: rec,

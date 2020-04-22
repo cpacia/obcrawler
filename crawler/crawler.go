@@ -30,12 +30,14 @@ import (
 
 var log = logging.MustGetLogger("CRWLR")
 
+// Crawler is an OpenBazaar network crawler which seeks to
+// scrape all new listings and profiles.
 type Crawler struct {
 	nodes         []*core.OpenBazaarNode
 	numPubsub     uint
 	numWorkers    uint
 	ipnsQuorum    uint
-	workChan      chan *Job
+	workChan      chan *job
 	cacheData     bool
 	pinFiles      bool
 	subs          map[uint64]*rpc.Subscription
@@ -48,12 +50,13 @@ type Crawler struct {
 	shutdown      chan struct{}
 }
 
+// NewCrawler returns a new crawler with the given config options.
 func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	crawler := &Crawler{
 		ctx:           ctx,
 		cancel:        cancel,
-		workChan:      make(chan *Job),
+		workChan:      make(chan *job),
 		subs:          make(map[uint64]*rpc.Subscription),
 		subMtx:        sync.RWMutex{},
 		cacheData:     !cfg.DisableDataCaching,
@@ -135,6 +138,8 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 	return crawler, nil
 }
 
+// CrawlNode is a method that can be used to manually trigger a
+// crawl of a node. If the node is banned an error will be returned.
 func (c *Crawler) CrawlNode(pid peer.ID) error {
 	err := c.db.View(func(db *gorm.DB) error {
 		var peer repo.Peer
@@ -151,13 +156,18 @@ func (c *Crawler) CrawlNode(pid peer.ID) error {
 		return err
 	}
 	go func() {
-		c.workChan <- &Job{
+		c.workChan <- &job{
 			Peer: pid,
 		}
 	}()
 	return nil
 }
 
+// BanNode bans the provided node and unpins any content of that node
+// that the crawler is seeding. The content will then be delete at the
+// next gc interval.
+//
+// Once a node is banned it will no longer be crawled going forward.
 func (c *Crawler) BanNode(pid peer.ID) error {
 	var cidsRecs []repo.CIDRecord
 	err := c.db.Update(func(db *gorm.DB) error {
@@ -190,6 +200,8 @@ func (c *Crawler) BanNode(pid peer.ID) error {
 	return nil
 }
 
+// UnbanNode marks the node as unbanned in the database and make it
+// eligible to once again be crawled.
 func (c *Crawler) UnbanNode(pid peer.ID) error {
 	return c.db.Update(func(db *gorm.DB) error {
 		var peer repo.Peer
@@ -203,6 +215,8 @@ func (c *Crawler) UnbanNode(pid peer.ID) error {
 	})
 }
 
+// Subscribe returns a subscription with a channel over which new profiles
+// and listings will be pushed when they are crawled.
 func (c *Crawler) Subscribe() (*rpc.Subscription, error) {
 	i := mrand.Uint64()
 	sub := &rpc.Subscription{
@@ -228,6 +242,7 @@ func (c *Crawler) Subscribe() (*rpc.Subscription, error) {
 	return sub, nil
 }
 
+// Start will start the crawler and related processes.
 func (c *Crawler) Start() error {
 	for _, n := range c.nodes {
 		n.Start()
@@ -281,7 +296,7 @@ func (c *Crawler) Start() error {
 							log.Errorf("Error decoding peerID in old node loop: %s", err)
 							continue
 						}
-						c.workChan <- &Job{
+						c.workChan <- &job{
 							Peer: pid,
 						}
 					}
@@ -300,6 +315,7 @@ func (c *Crawler) Start() error {
 	return c.listenPubsub()
 }
 
+// Stop shuts down the crawler.
 func (c *Crawler) Stop() error {
 	close(c.shutdown)
 	c.cancel()

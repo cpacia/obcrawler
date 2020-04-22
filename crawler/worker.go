@@ -30,7 +30,7 @@ import (
 
 const catTimeout = time.Second * 30
 
-type Job struct {
+type job struct {
 	Peer         peer.ID
 	IPNSRecord   *ipnspb.IpnsEntry
 	Expiration   time.Time

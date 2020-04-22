@@ -16,11 +16,14 @@ const (
 	dbName = "crawler"
 )
 
+// Database is a mutex wrapper around a GORM db.
 type Database struct {
 	db  *gorm.DB
 	mtx sync.Mutex
 }
 
+// NewDatabase returns a new database with the given options.
+// Sqlite3, Mysql, and Postgress is supported.
 func NewDatabase(dataDir string, opts ...Option) (*Database, error) {
 	options := Options{
 		Host:    "localhost",
@@ -56,6 +59,8 @@ func NewDatabase(dataDir string, opts ...Option) (*Database, error) {
 	return &Database{db: db}, nil
 }
 
+// View is used for read access to the db. Reads are made
+// inside and open transaction.
 func (d *Database) View(fn func(db *gorm.DB) error) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -68,6 +73,8 @@ func (d *Database) View(fn func(db *gorm.DB) error) error {
 	return tx.Commit().Error
 }
 
+// Update is used for write access to the db. Updates are made
+// inside an open transaction.
 func (d *Database) Update(fn func(db *gorm.DB) error) error {
 	d.mtx.Lock()
 	defer d.mtx.Unlock()
@@ -80,6 +87,7 @@ func (d *Database) Update(fn func(db *gorm.DB) error) error {
 	return tx.Commit().Error
 }
 
+// Options represents the database options.
 type Options struct {
 	Host     string
 	Port     uint
@@ -88,6 +96,7 @@ type Options struct {
 	Password string
 }
 
+// Apply sets the provided options in the main options struct.
 func (o *Options) Apply(opts ...Option) error {
 	for i, opt := range opts {
 		if err := opt(o); err != nil {
@@ -97,8 +106,10 @@ func (o *Options) Apply(opts ...Option) error {
 	return nil
 }
 
+// Option represents a db option.
 type Option func(*Options) error
 
+// Host option allows you to set the host for mysql or postgress dbs.
 func Host(host string) Option {
 	return func(o *Options) error {
 		o.Host = host
@@ -106,6 +117,7 @@ func Host(host string) Option {
 	}
 }
 
+// Port option sets the port for mysql or postgress dbs.
 func Port(port uint) Option {
 	return func(o *Options) error {
 		o.Port = port
@@ -113,6 +125,7 @@ func Port(port uint) Option {
 	}
 }
 
+// Dialect sets the database type...sqlite3, mysql, postress.
 func Dialect(dialect string) Option {
 	return func(o *Options) error {
 		o.Dialect = dialect
@@ -120,6 +133,7 @@ func Dialect(dialect string) Option {
 	}
 }
 
+// Password is the password for the mysql or postgress dbs.
 func Password(pw string) Option {
 	return func(o *Options) error {
 		o.Password = pw
@@ -127,6 +141,7 @@ func Password(pw string) Option {
 	}
 }
 
+// User is the username for the mysql or postgress dbs.
 func User(user string) Option {
 	return func(o *Options) error {
 		o.User = user
