@@ -3,8 +3,8 @@ module github.com/cpacia/obcrawler
 go 1.13
 
 require (
-	github.com/cpacia/openbazaar3.0 v0.0.0-20200223054505-bc325264f6b3
-	github.com/gcash/bchutil v0.0.0-20191012211144-98e73ec336ba
+	github.com/cpacia/openbazaar3.0 v0.0.0-20200421164631-626c7d086a69
+	github.com/gcash/bchutil v0.0.0-20200228172631-5e1930e5d630
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.2
 	github.com/improbable-eng/grpc-web v0.9.1

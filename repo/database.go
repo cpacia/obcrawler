@@ -36,6 +36,9 @@ func NewDatabase(dataDir string, opts ...Option) (*Database, error) {
 	dbPath := path.Join(dataDir, dbName)
 
 	switch strings.ToLower(options.Dialect) {
+	case "test":
+		dbPath = ":memory:"
+		options.Dialect = "sqlite3"
 	case "mysql":
 		dbPath = fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8&parseTime=True", options.User, options.Password, options.Host, options.Port, dbName)
 	case "postgress":
