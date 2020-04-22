@@ -223,6 +223,11 @@ func TestCrawler_CrawlNode(t *testing.T) {
 
 	defer mn.TearDown()
 
+	eventSub, err := mn.Nodes()[2].SubscribeEvent(&events.PublishFinished{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	profile := &models.Profile{
 		Name: "Q",
 	}
@@ -237,11 +242,33 @@ func TestCrawler_CrawlNode(t *testing.T) {
 		t.Fatal("Timed out waiting on profile publish")
 	}
 
+	select {
+	case <-eventSub.Out():
+	case <-time.After(time.Second * 5):
+		t.Fatal("Timed out waiting on publish")
+	}
+
+	sub, err := crawler.Subscribe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if err := crawler.CrawlNode(mn.Nodes()[2].Identity()); err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(time.Second * 3)
+	select {
+	case obj := <-sub.Out:
+		pro, ok := obj.Data.(*models.Profile)
+		if !ok {
+			t.Fatal("Invalid type assertion")
+		}
+		if pro.Name != profile.Name {
+			t.Fatal("Returned incorrect profile")
+		}
+	case <-time.After(time.Second * 5):
+		t.Fatal("Timed out waiting on subscription")
+	}
 }
 
 func TestCrawler_BanNode(t *testing.T) {
