@@ -47,6 +47,7 @@ type Crawler struct {
 	cancel        context.CancelFunc
 	crawlInterval time.Duration
 	grpcServer    *rpc.GrpcServer
+	resolver      *resolver
 	shutdown      chan struct{}
 }
 
@@ -133,6 +134,14 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(cfg.ResolverListeners) > 0 {
+		netAddrs, err := parseListeners(cfg.ResolverListeners)
+		if err != nil {
+			return nil, err
+		}
+		crawler.resolver = newResolver(netAddrs, db, cfg)
 	}
 
 	return crawler, nil

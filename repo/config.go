@@ -72,11 +72,13 @@ type Config struct {
 	DisableDataCaching bool          `long:"disabledatacaching" description:"By default the crawler will download, cache, and seed node data including images and ratings. This functionality can be disabled with this flag."`
 	DisableFilePinning bool          `long:"diablefilepinning" description:"By default the crawler will pin all files it downloads until the file is replaced by another one."`
 
-	RPCCert       string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
-	RPCKey        string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
-	ExternalIPs   []string `long:"externalips" description:"This option should be used to specify the external IP address if using the auto-generated SSL certificate"`
-	GrpcListeners []string `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
-	GrpcAuthToken string   `long:"grpcauthtoken" description:"Set a token here if you want to enable client authentication with gRPC"`
+	RPCCert           string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
+	RPCKey            string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`
+	ExternalIPs       []string `long:"externalips" description:"This option should be used to specify the external IP address if using the auto-generated SSL certificate"`
+	GrpcListeners     []string `long:"grpclisten" description:"Add an interface/port to listen for experimental gRPC connections (default port:5001)"`
+	GrpcAuthToken     string   `long:"grpcauthtoken" description:"Set a token here if you want to enable client authentication with gRPC"`
+	ResolverListeners []string `long:"resolverlisten" description:"Run a resolver HTTP server for IPNS records."`
+	NoResolverTLS     bool     `long:"noresolvertls" description:"Disable TLS when using the resolver."`
 
 	DBDialect string `long:"dbdialect" description:"The type of database to use [sqlite3, mysql, postgress]" default:"sqlite3"`
 	DBHost    string `long:"dbhost" description:"The host:post location of the database."`

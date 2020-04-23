@@ -7,6 +7,7 @@ require (
 	github.com/gcash/bchutil v0.0.0-20200228172631-5e1930e5d630
 	github.com/gogo/protobuf v1.2.1
 	github.com/golang/protobuf v1.3.2
+	github.com/gorilla/mux v1.7.3
 	github.com/improbable-eng/grpc-web v0.9.1
 	github.com/ipfs/go-cid v0.0.4
 	github.com/ipfs/go-ipfs v0.4.23
