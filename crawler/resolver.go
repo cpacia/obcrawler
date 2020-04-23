@@ -1,8 +1,6 @@
 package crawler
 
 import (
-	"bytes"
-	"fmt"
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
@@ -67,5 +65,5 @@ func (res *resolver) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/protobuf; proto=ipns.pb.IpnsEntry")
-	fmt.Fprint(w, bytes.NewReader(peerRecord.IPNSRecord))
+	w.Write(peerRecord.IPNSRecord)
 }
