@@ -16,6 +16,6 @@ type Peer struct {
 
 // CIDRecord is a database model that maps a CID to a peer ID.
 type CIDRecord struct {
-	CID    string `gorm:"primary_key"`
+	CID    string `gorm:"index"`
 	PeerID string `gorm:"index"`
 }

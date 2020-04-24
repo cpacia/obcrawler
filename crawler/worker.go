@@ -202,6 +202,7 @@ func (c *Crawler) worker() {
 				var (
 					oldCIDs []repo.CIDRecord
 					newCIDs = make(map[string]bool)
+					toUnpin []string
 				)
 				err = c.db.Update(func(db *gorm.DB) error {
 					err := db.Where("peer_id=?", job.Peer.Pretty()).Find(&oldCIDs).Error
@@ -218,6 +219,28 @@ func (c *Crawler) worker() {
 								return err
 							}
 							newCIDs[id.String()] = true
+						}
+					}
+
+					for _, rec := range oldCIDs {
+						if !newCIDs[rec.CID] {
+							// If the old CID is not in the new list then delete it from the db for this peer.
+							err = db.Where("c_id = ?", rec.CID).Where("peer_id=?", job.Peer.Pretty()).Delete(&repo.CIDRecord{}).Error
+							if err != nil {
+								log.Errorf("Error deleting CID record for peer %s: %s", job.Peer.Pretty(), err)
+							}
+
+							// While we deleted it for this peer, we only want to unpin it if no other peer has this CID.
+							// So here we will query the db to see if we can find any stored by any other peers. If no, then
+							// we will add it to our unpin list.
+							var recs []repo.CIDRecord
+							err = db.Where("c_id=?", rec.CID).Where("peer_id<>?", job.Peer.Pretty()).Find(&recs).Error
+							if err != nil && !gorm.IsRecordNotFoundError(err) {
+								return err
+							}
+							if len(recs) == 0 {
+								toUnpin = append(toUnpin, rec.CID)
+							}
 						}
 					}
 					return nil
@@ -251,32 +274,18 @@ func (c *Crawler) worker() {
 					}
 				}
 
-				// If the old CID is not carrying forward, unpin and delete from the db.
-				var toDelete []string
-				for _, rec := range oldCIDs {
-					if !newCIDs[rec.CID] {
-						id, err := cid.Decode(rec.CID)
-						if err != nil {
-							log.Errorf("Error decoding CID for unpinning, peer %s: %s", job.Peer.Pretty(), err)
-							continue
-						}
-						err = c.unpinCID(id)
-						if err != nil {
-							log.Errorf("Error unpinning file %s for peer %s: %s", id, job.Peer.Pretty(), err)
-						} else {
-							toDelete = append(toDelete, rec.CID)
-						}
+				// If the old CID is not carrying forward, unpin.
+				for _, u := range toUnpin {
+					id, err := cid.Decode(u)
+					if err != nil {
+						log.Errorf("Error decoding CID for unpinning, peer %s: %s", job.Peer.Pretty(), err)
+						continue
+					}
+					err = c.unpinCID(id)
+					if err != nil {
+						log.Errorf("Error unpinning file %s for peer %s: %s", id, job.Peer.Pretty(), err)
 					}
 				}
-				c.db.Update(func(db *gorm.DB) error {
-					for _, id := range toDelete {
-						err = db.Where("c_id = ?", id).Delete(&repo.CIDRecord{}).Error
-						if err != nil {
-							log.Errorf("Error deleting CID record for peer %s: %s", job.Peer.Pretty(), err)
-						}
-					}
-					return nil
-				})
 			}()
 		}
 	}
