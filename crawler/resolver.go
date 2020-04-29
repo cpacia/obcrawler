@@ -4,7 +4,7 @@ import (
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/gorilla/mux"
 	"github.com/jinzhu/gorm"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"net"
 	"net/http"
 )

@@ -5,7 +5,7 @@ import (
 	"github.com/cpacia/obcrawler/rpc/pb"
 	"github.com/cpacia/openbazaar3.0/models"
 	"github.com/golang/protobuf/ptypes"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/op/go-logging"
 )
 

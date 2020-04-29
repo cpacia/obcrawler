@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 // Crawler is an interface to the Crawler package used to
