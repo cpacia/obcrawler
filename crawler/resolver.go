@@ -55,7 +55,7 @@ func (res *resolver) handler(w http.ResponseWriter, r *http.Request) {
 
 	var peerRecord repo.Peer
 	err = res.db.View(func(db *gorm.DB) error {
-		return db.Where("peer_id=?", pid.Pretty()).First(&peerRecord).Error
+		return db.Where("peer_id=?", pid.Pretty()).Where("banned=?", false).First(&peerRecord).Error
 	})
 	if err != nil && gorm.IsRecordNotFoundError(err) {
 		http.Error(w, err.Error(), http.StatusNotFound)
