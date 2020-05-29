@@ -9,6 +9,7 @@ type Peer struct {
 	FirstSeen      time.Time
 	LastSeen       time.Time `gorm:"index"`
 	LastCrawled    time.Time `gorm:"index"`
+	LastPinned     time.Time `gorm:"index"`
 	IPNSExpiration time.Time `gorm:"index"`
 	IPNSRecord     []byte
 	Banned         bool `gorm:"index"`

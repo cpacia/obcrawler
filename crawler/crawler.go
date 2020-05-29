@@ -9,10 +9,12 @@ import (
 	"github.com/cpacia/obcrawler/rpc"
 	"github.com/cpacia/openbazaar3.0/core"
 	obrepo "github.com/cpacia/openbazaar3.0/repo"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-cid"
 	core2 "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/core/corerepo"
+	ipnspb "github.com/ipfs/go-ipns/pb"
 	ipath "github.com/ipfs/interface-go-ipfs-core/path"
 	"github.com/jinzhu/gorm"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
@@ -40,6 +42,7 @@ type Crawler struct {
 	workChan      chan *job
 	cacheData     bool
 	pinFiles      bool
+	pinRecords    bool
 	subs          map[uint64]*rpc.Subscription
 	subMtx        sync.RWMutex
 	db            *repo.Database
@@ -62,6 +65,7 @@ func NewCrawler(cfg *repo.Config) (*Crawler, error) {
 		subMtx:        sync.RWMutex{},
 		cacheData:     !cfg.DisableDataCaching,
 		pinFiles:      !cfg.DisableFilePinning,
+		pinRecords:    !cfg.DisableIPNSPinning,
 		numPubsub:     cfg.PubsubNodes,
 		numWorkers:    cfg.NumWorkers,
 		ipnsQuorum:    cfg.IPNSQuorum,
@@ -288,7 +292,7 @@ func (c *Crawler) Start() error {
 				var peers []repo.Peer
 				err := c.db.View(func(db *gorm.DB) error {
 					return db.Where("banned=?", false).
-						Where("ip_ns_expiration<?", time.Now()).
+						Where("ip_ns_expiration>?", time.Now()).
 						Where("last_crawled<?", time.Now().Add(-time.Hour*24*7)).
 						Where("last_seen>?", time.Now().Add(-time.Hour*24*90)).
 						Order("last_crawled asc").
@@ -301,13 +305,22 @@ func (c *Crawler) Start() error {
 				}
 				go func() {
 					for _, p := range peers {
-						pid, err := peer.IDB58Decode(p.PeerID)
+						pid, err := peer.Decode(p.PeerID)
 						if err != nil {
 							log.Errorf("Error decoding peerID in old node loop: %s", err)
 							continue
 						}
+						rec := new(ipnspb.IpnsEntry)
+						if err := proto.Unmarshal(p.IPNSRecord, rec); err != nil {
+							log.Errorf("Error unmarshalling IPNS record for peer %s: %s", p.PeerID, err)
+							continue
+						}
 						c.workChan <- &job{
-							Peer: pid,
+							Peer:           pid,
+							IPNSRecord:     rec,
+							FetchNewRecord: true,
+							PinRecord:      c.pinRecords,
+							Expiration:     p.IPNSExpiration,
 						}
 					}
 				}()

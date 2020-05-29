@@ -15,13 +15,14 @@ import (
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/namesys"
 	ipld "github.com/ipfs/go-ipld-format"
 	"github.com/ipfs/go-ipns"
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	"github.com/ipfs/go-merkledag"
 	"github.com/ipfs/interface-go-ipfs-core/path"
 	"github.com/jinzhu/gorm"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p-core/peer"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	"io/ioutil"
 	"math/rand"
@@ -31,10 +32,11 @@ import (
 const catTimeout = time.Second * 30
 
 type job struct {
-	Peer         peer.ID
-	IPNSRecord   *ipnspb.IpnsEntry
-	Expiration   time.Time
-	LastKnownVal []byte
+	Peer           peer.ID
+	IPNSRecord     *ipnspb.IpnsEntry
+	Expiration     time.Time
+	FetchNewRecord bool
+	PinRecord      bool
 }
 
 func (c *Crawler) worker() {
@@ -49,7 +51,16 @@ func (c *Crawler) worker() {
 			func() {
 				log.Debugf("Starting crawl of peer %s", job.Peer.Pretty())
 				start := time.Now()
+
+				// We'll pick one random node to use for our crawls.
+				r := rand.Intn(len(c.nodes))
 				defer func() {
+					// Pin IPNS record if requested.
+					if job.PinRecord {
+						if err := namesys.PutRecordToRouting(c.ctx, c.nodes[r].IPFSNode().Routing, nil, job.IPNSRecord); err != nil {
+							log.Errorf("Error pinning IPNS record for peer %s: %s", job.Peer.Pretty(), err)
+						}
+					}
 					err := c.db.Update(func(db *gorm.DB) error {
 						var peer repo.Peer
 						err := db.Where("peer_id=?", job.Peer.Pretty()).First(&peer).Error
@@ -57,6 +68,9 @@ func (c *Crawler) worker() {
 							return err
 						}
 						peer.LastCrawled = time.Now()
+						if job.PinRecord {
+							peer.LastPinned = time.Now()
+						}
 						return db.Save(&peer).Error
 					})
 					if err != nil {
@@ -65,18 +79,20 @@ func (c *Crawler) worker() {
 					log.Debugf("Crawl of %s finished in %s", job.Peer.Pretty(), time.Since(start))
 				}()
 
-				// We'll pick one random node to use for our crawls.
-				r := rand.Intn(len(c.nodes))
-
-				// If the job was passed in with a nil record it means the caller wants us to try to
-				// fetch and/or refresh the record so we will try to get the record from routing. This
-				// will fail if the record is expired or unavailable.
-				if job.IPNSRecord == nil {
+				// If FetchNewRecord is true it means the caller wants us to try to fetch and/or refresh
+				// the record so we will try to get the record from routing. This will fail if the record
+				// is expired or unavailable.
+				if job.FetchNewRecord {
 					rec, err := fetchIPNSRecord(c.ctx, c.nodes[r].IPFSNode(), job.Peer, int(c.ipnsQuorum))
 					if err != nil {
 						log.Warningf("IPNS record not found for peer %s", job.Peer.Pretty())
 						return
 					}
+					if bytes.Equal(rec.GetValue(), job.IPNSRecord.Value) {
+						log.Debugf("IPNS record for peer %s is unchanged", job.Peer.Pretty())
+						return
+					}
+
 					job.IPNSRecord = rec
 					eol, err := ipns.GetEOL(rec)
 					if err != nil {
@@ -84,10 +100,6 @@ func (c *Crawler) worker() {
 						return
 					}
 					job.Expiration = eol
-					if bytes.Equal(rec.GetValue(), job.LastKnownVal) {
-						log.Debugf("IPNS record for peer %s is unchanged", job.Peer.Pretty())
-						return
-					}
 				}
 
 				// Next we want to load the IPLD node for the record's root CID. We can use this

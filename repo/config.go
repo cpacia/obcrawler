@@ -55,10 +55,10 @@ var (
 //
 // See LoadConfig for details on the configuration load process.
 type Config struct {
+	ShowVersion        bool          `short:"v" long:"version" description:"Display version information and exit"`
 	NumNodes           uint          `short:"n" long:"nodes" description:"Number of IPFS nodes to spin up." default:"10"`
 	NumWorkers         uint          `short:"w" long:"workers" description:"Number of workers to use when crawling nodes" default:"12"`
 	PubsubNodes        uint          `short:"p" long:"pubsubnodes" description:"Number of pubsub nodes to listen on." default:"3"`
-	ShowVersion        bool          `short:"v" long:"version" description:"Display version information and exit"`
 	ConfigFile         string        `short:"C" long:"configfile" description:"Path to configuration file"`
 	DataDir            string        `short:"d" long:"datadir" description:"Directory to store data"`
 	CrawlInterval      time.Duration `long:"crawlinterval" description:"The amount of time to wait between network crawls" default:"5m"`
@@ -71,6 +71,7 @@ type Config struct {
 	UserAgentComment   string        `long:"uacomment" description:"Comment to add to the user agent"`
 	DisableDataCaching bool          `long:"disabledatacaching" description:"By default the crawler will download, cache, and seed node data including images and ratings. This functionality can be disabled with this flag."`
 	DisableFilePinning bool          `long:"diablefilepinning" description:"By default the crawler will pin all files it downloads until the file is replaced by another one."`
+	DisableIPNSPinning bool          `long:"disableipnspinning" description:"By default the crawler will pin non-expired IPNS records to ensure availability."`
 
 	RPCCert           string   `long:"rpccert" description:"A path to the SSL certificate to use with gRPC"`
 	RPCKey            string   `long:"rpckey" description:"A path to the SSL key to use with gRPC"`

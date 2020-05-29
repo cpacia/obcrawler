@@ -1,24 +1,43 @@
 package main
 
 import (
-	"github.com/cpacia/obcrawler/cmd"
-	"github.com/jessevdk/go-flags"
-	"log"
+	"github.com/cpacia/obcrawler/crawler"
+	"github.com/cpacia/obcrawler/repo"
+	"github.com/op/go-logging"
 	"os"
+	"os/signal"
 )
 
-func main() {
-	parser := flags.NewParser(nil, flags.Default)
+var log = logging.MustGetLogger("MAIN")
 
-	_, err := parser.AddCommand("start",
-		"start the crawler",
-		"The start command starts the crawler",
-		&cmd.Start{})
+func main() {
+	cfg, err := repo.LoadConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err := parser.Parse(); err != nil {
-		os.Exit(1)
+	crawler, err := crawler.NewCrawler(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := crawler.Start(); err != nil {
+		log.Fatal(err)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	for sig := range c {
+		if sig == os.Kill {
+			log.Info("obcrawler killed")
+			os.Exit(1)
+		}
+
+		if err := crawler.Stop(); err != nil {
+			log.Error(err)
+			os.Exit(1)
+		}
+		log.Info("obcrawler stopping...")
+		os.Exit(0)
 	}
 }
