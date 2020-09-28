@@ -153,6 +153,7 @@ func (c *Crawler) processJob(job *job) {
 	}
 
 	// If the listing index link exists, crawl the listings.
+	var newListings []string
 	if listingsLink != nil {
 		listingBytes, err := c.cat(c.ctx, c.nodes[r].IPFSNode(), path.IpfsPath(listingsLink.Cid))
 		if err == nil {
@@ -167,6 +168,7 @@ func (c *Crawler) processJob(job *job) {
 						log.Errorf("Error decoding CID for peer %s: %s", job.Peer.Pretty(), err)
 						continue
 					}
+					newListings = append(newListings, listing.CID)
 					listing, err := c.nodes[r].GetListingByCID(c.ctx, id)
 					if err != nil {
 						log.Errorf("Unable to load listing %s for peer %s: %s", id.String(), job.Peer.Pretty(), err)
@@ -192,6 +194,20 @@ func (c *Crawler) processJob(job *job) {
 		if err != nil {
 			log.Errorf("Error fetching graph for peer %s: %s", job.Peer.Pretty(), err)
 		}
+	}
+	graph = append(graph, rootCID)
+	if profileLink != nil {
+		graph = append(graph, profileLink.Cid)
+	}
+	if listingsLink != nil {
+		graph = append(graph, listingsLink.Cid)
+	}
+	for _, l := range newListings {
+		id, err := cid.Decode(l)
+		if err != nil {
+			continue
+		}
+		graph = append(graph, id)
 	}
 
 	// Finally we want to:

@@ -121,7 +121,7 @@ message Profile {
         uint32 postCount      = 5;
         float averageRating   = 6;
     }
-    
+
     message ImageHashes {
         string tiny     = 1;
         string small    = 2;
