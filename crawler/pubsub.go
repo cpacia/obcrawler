@@ -9,6 +9,7 @@ import (
 	"github.com/ipfs/go-ipns"
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	iface "github.com/ipfs/interface-go-ipfs-core"
+	caopts "github.com/ipfs/interface-go-ipfs-core/options"
 	"github.com/jinzhu/gorm"
 	"sync"
 	"time"
@@ -25,7 +26,7 @@ func (c *Crawler) listenPubsub() error {
 		if err != nil {
 			return err
 		}
-		sub, err := api.PubSub().Subscribe(c.ctx, ipnsPubsubTopic)
+		sub, err := api.PubSub().Subscribe(c.ctx, ipnsPubsubTopic, caopts.PubSub.Discover(true))
 		if err != nil {
 			return err
 		}

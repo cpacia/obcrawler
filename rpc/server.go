@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/cpacia/obcrawler/rpc/pb"
 	"github.com/cpacia/openbazaar3.0/models"
+	obpb "github.com/cpacia/openbazaar3.0/orders/pb"
 	"github.com/golang/protobuf/ptypes"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	"github.com/op/go-logging"
@@ -111,11 +112,11 @@ func (s *GrpcServer) Subscribe(req *pb.SubscribeRequest, stream pb.Obcrawler_Sub
 						pro.Profile.ModeratorInfo.Fee.FeeType = pb.Profile_ModeratorInfo_ModeratorFee_FixedPlusPercentageFee
 					}
 					if o.ModeratorInfo.Fee.FixedFee != nil {
-						pro.Profile.ModeratorInfo.Fee.FixedFee = &pb.CurrencyValue{
+						pro.Profile.ModeratorInfo.Fee.FixedFee = &pb.Profile_CurrencyValue{
 							Amount: o.ModeratorInfo.Fee.FixedFee.Amount.String(),
 						}
 						if o.ModeratorInfo.Fee.FixedFee.Currency != nil {
-							pro.Profile.ModeratorInfo.Fee.FixedFee.Currency = &pb.Currency{
+							pro.Profile.ModeratorInfo.Fee.FixedFee.Currency = &pb.Profile_Currency{
 								Code:         o.ModeratorInfo.Fee.FixedFee.Currency.Code.String(),
 								Divisibility: uint32(o.ModeratorInfo.Fee.FixedFee.Currency.Divisibility),
 							}
@@ -157,7 +158,7 @@ func (s *GrpcServer) Subscribe(req *pb.SubscribeRequest, stream pb.Obcrawler_Sub
 				if err := stream.Send(ud); err != nil {
 					return err
 				}
-			case *pb.SignedListing:
+			case *obpb.SignedListing:
 				ud := &pb.UserData{
 					Expiration: ts,
 					Data: &pb.UserData_Listing{
