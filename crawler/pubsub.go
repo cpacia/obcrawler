@@ -105,9 +105,9 @@ func (c *Crawler) listenPubsub() error {
 					} else if gorm.IsRecordNotFoundError(err) {
 						peer.PeerID = message.From().Pretty()
 						peer.FirstSeen = time.Now()
-						peer.LastSeen = time.Now()
 						log.Infof("Detected new peer: %s", message.From().Pretty())
 					}
+					peer.LastSeen = time.Now()
 					peer.IPNSExpiration = expiration
 					peer.IPNSRecord = message.Data()
 					banned = peer.Banned
@@ -116,17 +116,16 @@ func (c *Crawler) listenPubsub() error {
 				if err != nil {
 					log.Errorf("Error saving IPNS record for peer %s: %s", message.From().Pretty(), err)
 				}
-				if banned {
-					continue
+				if !banned {
+					log.Debugf("Received new IPNS record from %s. Expiration %s", message.From().Pretty(), expiration)
+					go func() {
+						c.workChan <- &job{
+							Peer:       message.From(),
+							Expiration: expiration,
+							IPNSRecord: rec,
+						}
+					}()
 				}
-				log.Debugf("Received new IPNS record from %s. Expiration %s", message.From().Pretty(), expiration)
-				go func() {
-					c.workChan <- &job{
-						Peer:       message.From(),
-						Expiration: expiration,
-						IPNSRecord: rec,
-					}
-				}()
 			}
 		}
 	}()
