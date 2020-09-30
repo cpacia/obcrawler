@@ -88,13 +88,14 @@ func (c *Crawler) processJob(job *job) {
 	// If FetchNewRecord is true it means the caller wants us to try to fetch and/or refresh
 	// the record so we will try to get the record from routing. This will fail if the record
 	// is expired or unavailable.
-	if job.FetchNewRecord {
+	if job.FetchNewRecord || job.IPNSRecord == nil {
 		rec, err := fetchIPNSRecord(c.ctx, c.nodes[r].IPFSNode(), job.Peer, int(c.ipnsQuorum))
 		if err != nil {
 			log.Warningf("IPNS record not found for peer %s", job.Peer.Pretty())
 			return
 		}
-		if bytes.Equal(rec.GetValue(), job.IPNSRecord.Value) {
+
+		if job.IPNSRecord != nil && bytes.Equal(rec.GetValue(), job.IPNSRecord.Value) {
 			log.Debugf("IPNS record for peer %s is unchanged", job.Peer.Pretty())
 			return
 		}
