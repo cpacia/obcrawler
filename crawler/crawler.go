@@ -16,12 +16,12 @@ import (
 	"github.com/ipfs/go-ipfs/core/corerepo"
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	ipath "github.com/ipfs/interface-go-ipfs-core/path"
-	"github.com/jinzhu/gorm"
 	crypto "github.com/libp2p/go-libp2p-core/crypto"
 	inet "github.com/libp2p/go-libp2p-core/network"
 	peer "github.com/libp2p/go-libp2p-core/peer"
 	routing "github.com/libp2p/go-libp2p-core/routing"
 	"github.com/op/go-logging"
+	"gorm.io/gorm"
 	mrand "math/rand"
 	"path"
 	"strconv"
@@ -157,7 +157,7 @@ func (c *Crawler) CrawlNode(pid peer.ID) error {
 	err := c.db.View(func(db *gorm.DB) error {
 		var peer repo.Peer
 		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		if peer.Banned {
@@ -170,7 +170,8 @@ func (c *Crawler) CrawlNode(pid peer.ID) error {
 	}
 	go func() {
 		c.workChan <- &job{
-			Peer: pid,
+			Peer:           pid,
+			FetchNewRecord: true,
 		}
 	}()
 	return nil
@@ -186,7 +187,7 @@ func (c *Crawler) BanNode(pid peer.ID) error {
 	err := c.db.Update(func(db *gorm.DB) error {
 		var peer repo.Peer
 		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		peer.PeerID = pid.String()
@@ -219,7 +220,7 @@ func (c *Crawler) UnbanNode(pid peer.ID) error {
 	return c.db.Update(func(db *gorm.DB) error {
 		var peer repo.Peer
 		err := db.Where("peer_id=?", pid.Pretty()).First(&peer).Error
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
 		peer.PeerID = pid.String()
@@ -299,7 +300,7 @@ func (c *Crawler) Start() error {
 						Limit(10).
 						Find(&peers).Error
 				})
-				if err != nil && !gorm.IsRecordNotFoundError(err) {
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					log.Errorf("Error crawling loading old peers %s", err)
 					continue
 				}
@@ -374,9 +375,9 @@ func (c *Crawler) listenPeers(n *core2.IpfsNode) {
 		err := c.db.Update(func(db *gorm.DB) error {
 			var peer repo.Peer
 			err := db.Where("peer_id=?", conn.RemotePeer().Pretty()).First(&peer).Error
-			if err != nil && !gorm.IsRecordNotFoundError(err) {
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
-			} else if gorm.IsRecordNotFoundError(err) {
+			} else if errors.Is(err, gorm.ErrRecordNotFound) {
 				peer.FirstSeen = time.Now()
 				peer.PeerID = conn.RemotePeer().Pretty()
 				log.Infof("Detected new peer: %s", conn.RemotePeer().Pretty())

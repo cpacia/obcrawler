@@ -4,14 +4,15 @@
 package pb
 
 import (
-	context "context"
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
-	math "math"
+	"context"
+	"fmt"
+	"github.com/cpacia/openbazaar3.0/orders/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -130,7 +131,7 @@ type UserData_Profile struct {
 }
 
 type UserData_Listing struct {
-	Listing *SignedListing `protobuf:"bytes,2,opt,name=listing,proto3,oneof"`
+	Listing *pb.SignedListing `protobuf:"bytes,2,opt,name=listing,proto3,oneof"`
 }
 
 func (*UserData_Profile) isUserData_Data() {}
@@ -151,7 +152,7 @@ func (m *UserData) GetProfile() *Profile {
 	return nil
 }
 
-func (m *UserData) GetListing() *SignedListing {
+func (m *UserData) GetListing() *pb.SignedListing {
 	if x, ok := m.GetData().(*UserData_Listing); ok {
 		return x.Listing
 	}

@@ -3,10 +3,13 @@ package repo
 import (
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+	glog "log"
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -14,6 +17,13 @@ import (
 
 const (
 	dbName = "crawler"
+)
+
+var silentLogger = logger.New(
+	glog.New(os.Stdout, "\r\n", glog.LstdFlags),
+	logger.Config{
+		LogLevel: logger.Silent,
+	},
 )
 
 // Database is a mutex wrapper around a GORM db.
@@ -34,28 +44,35 @@ func NewDatabase(dataDir string, opts ...Option) (*Database, error) {
 	}
 
 	dbPath := path.Join(dataDir, dbName)
+	var dialector gorm.Dialector
 
 	switch strings.ToLower(options.Dialect) {
 	case "test":
 		dbPath = ":memory:"
-		options.Dialect = "sqlite3"
+		dialector = sqlite.Open(dbPath)
 	case "mysql":
 		dbPath = fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8&parseTime=True", options.User, options.Password, options.Host, options.Port, dbName)
+		dialector = mysql.Open(dbPath)
 	case "postgress":
-		dbPath = fmt.Sprintf("host=%s port=%d user=%s dbname=% password=%s", options.Host, options.Port, options.User, dbName, options.Password)
+		dbPath = fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s", options.Host, options.Port, options.User, dbName, options.Password)
+		dialector = postgres.Open(dbPath)
 	case "sqlite3":
 		dbPath = dbPath + ".db"
+		dialector = sqlite.Open(dbPath)
 		break
 	default:
 		return nil, errors.New("unknown database dialect")
 	}
 
-	db, err := gorm.Open(options.Dialect, dbPath)
+	db, err := gorm.Open(dialector, &gorm.Config{
+		AllowGlobalUpdate: true,
+		Logger:            silentLogger,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.AutoMigrate(&Peer{}, &CIDRecord{}).Error; err != nil {
+	if err := db.AutoMigrate(&Peer{}, &CIDRecord{}); err != nil {
 		return nil, err
 	}
 

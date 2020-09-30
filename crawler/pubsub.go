@@ -3,6 +3,7 @@ package crawler
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-ipfs/core/coreapi"
@@ -10,7 +11,7 @@ import (
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	iface "github.com/ipfs/interface-go-ipfs-core"
 	caopts "github.com/ipfs/interface-go-ipfs-core/options"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"sync"
 	"time"
 )
@@ -100,9 +101,9 @@ func (c *Crawler) listenPubsub() error {
 				err = c.db.Update(func(db *gorm.DB) error {
 					var peer repo.Peer
 					err := db.Where("peer_id=?", message.From().Pretty()).First(&peer).Error
-					if err != nil && !gorm.IsRecordNotFoundError(err) {
+					if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 						return err
-					} else if gorm.IsRecordNotFoundError(err) {
+					} else if errors.Is(err, gorm.ErrRecordNotFound) {
 						peer.PeerID = message.From().Pretty()
 						peer.FirstSeen = time.Now()
 						log.Infof("Detected new peer: %s", message.From().Pretty())

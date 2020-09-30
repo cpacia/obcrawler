@@ -1,10 +1,11 @@
 package crawler
 
 import (
+	"errors"
 	"github.com/cpacia/obcrawler/repo"
 	"github.com/gorilla/mux"
-	"github.com/jinzhu/gorm"
 	peer "github.com/libp2p/go-libp2p-core/peer"
+	"gorm.io/gorm"
 	"net"
 	"net/http"
 )
@@ -57,7 +58,7 @@ func (res *resolver) handler(w http.ResponseWriter, r *http.Request) {
 	err = res.db.View(func(db *gorm.DB) error {
 		return db.Where("peer_id=?", pid.Pretty()).Where("banned=?", false).First(&peerRecord).Error
 	})
-	if err != nil && gorm.IsRecordNotFoundError(err) {
+	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	} else if err != nil {

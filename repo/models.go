@@ -1,6 +1,9 @@
 package repo
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 // Peer is the database model holding information about the peer
 // and its IPNS record.
@@ -17,6 +20,7 @@ type Peer struct {
 
 // CIDRecord is a database model that maps a CID to a peer ID.
 type CIDRecord struct {
+	gorm.Model
 	CID    string `gorm:"index"`
 	PeerID string `gorm:"index"`
 }

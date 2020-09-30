@@ -9,7 +9,7 @@ import (
 	"github.com/cpacia/openbazaar3.0/models"
 	"github.com/cpacia/openbazaar3.0/models/factory"
 	"github.com/cpacia/openbazaar3.0/orders/pb"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"sync"
 	"testing"
 	"time"

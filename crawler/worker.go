@@ -21,9 +21,9 @@ import (
 	ipnspb "github.com/ipfs/go-ipns/pb"
 	"github.com/ipfs/go-merkledag"
 	"github.com/ipfs/interface-go-ipfs-core/path"
-	"github.com/jinzhu/gorm"
 	"github.com/libp2p/go-libp2p-core/peer"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
+	"gorm.io/gorm"
 	"io/ioutil"
 	"math/rand"
 	"time"
@@ -70,7 +70,7 @@ func (c *Crawler) processJob(job *job) {
 		err := c.db.Update(func(db *gorm.DB) error {
 			var peer repo.Peer
 			err := db.Where("peer_id=?", job.Peer.Pretty()).First(&peer).Error
-			if err != nil && !gorm.IsRecordNotFoundError(err) {
+			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 				return err
 			}
 			peer.LastCrawled = time.Now()
@@ -224,7 +224,7 @@ func (c *Crawler) processJob(job *job) {
 	)
 	err = c.db.Update(func(db *gorm.DB) error {
 		err := db.Where("peer_id=?", job.Peer.Pretty()).Find(&oldCIDs).Error
-		if err != nil && !gorm.IsRecordNotFoundError(err) {
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Errorf("Error loading current CIDs from DB for peer %s: %s", job.Peer.Pretty(), err)
 		}
 
@@ -253,7 +253,7 @@ func (c *Crawler) processJob(job *job) {
 				// we will add it to our unpin list.
 				var recs []repo.CIDRecord
 				err = db.Where("c_id=?", rec.CID).Where("peer_id<>?", job.Peer.Pretty()).Find(&recs).Error
-				if err != nil && !gorm.IsRecordNotFoundError(err) {
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 					return err
 				}
 				if len(recs) == 0 {
