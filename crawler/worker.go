@@ -62,7 +62,7 @@ func (c *Crawler) processJob(job *job) {
 	// which errored.
 	defer func() {
 		// Pin IPNS record if requested.
-		if job.PinRecord {
+		if job.PinRecord && job.IPNSRecord != nil {
 			if err := namesys.PutRecordToRouting(c.ctx, c.nodes[r].IPFSNode().Routing, nil, job.IPNSRecord); err != nil {
 				log.Errorf("Error pinning IPNS record for peer %s: %s", job.Peer.Pretty(), err)
 			}

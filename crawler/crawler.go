@@ -172,6 +172,7 @@ func (c *Crawler) CrawlNode(pid peer.ID) error {
 		c.workChan <- &job{
 			Peer:           pid,
 			FetchNewRecord: true,
+			PinRecord: c.pinRecords,
 		}
 	}()
 	return nil
@@ -190,7 +191,7 @@ func (c *Crawler) BanNode(pid peer.ID) error {
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
-		peer.PeerID = pid.String()
+		peer.PeerID = pid.Pretty()
 		peer.Banned = true
 		if err := db.Save(&peer).Error; err != nil {
 			return err
@@ -266,6 +267,7 @@ func (c *Crawler) Start() error {
 		crawlTicker := time.NewTicker(c.crawlInterval)
 		gcTicker := time.NewTicker(time.Hour * 24)
 		oldNodeTicker := time.NewTicker(time.Minute)
+		unPinTicker := time.NewTicker(time.Hour)
 		for {
 			select {
 			case <-crawlTicker.C:
@@ -322,6 +324,41 @@ func (c *Crawler) Start() error {
 							FetchNewRecord: true,
 							PinRecord:      c.pinRecords,
 							Expiration:     p.IPNSExpiration,
+						}
+					}
+				}()
+			case <-unPinTicker.C:
+				var peers []repo.Peer
+				err := c.db.View(func(db *gorm.DB) error {
+					return db.Where("ip_ns_expiration>?", time.Now()).
+						Where("last_seen>?", time.Now().Add(-time.Hour*24*90)).
+						Order("last_crawled asc").
+						Limit(10).
+						Find(&peers).Error
+				})
+				if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+					log.Errorf("Error loading old peers %s", err)
+					continue
+				}
+				go func() {
+					for _, p := range peers {
+						var cidsRecs []repo.CIDRecord
+						err := c.db.View(func(db *gorm.DB) error {
+							return db.Where("peer_id=?", p.PeerID).Find(&cidsRecs).Error
+						})
+						if err != nil && !errors.Is(err, gorm.ErrRecordNotFound){
+							log.Errorf("Error loading cid for dead peer %s", err)
+							continue
+						}
+						for _, rec := range cidsRecs {
+							id, err := cid.Decode(rec.CID)
+							if err != nil {
+								continue
+							}
+
+							if err := c.unpinCID(id); err != nil {
+								log.Error("Error unpinning data for dead node %s: %s", p.PeerID, err)
+							}
 						}
 					}
 				}()
