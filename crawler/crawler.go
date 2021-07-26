@@ -172,7 +172,7 @@ func (c *Crawler) CrawlNode(pid peer.ID) error {
 		c.workChan <- &job{
 			Peer:           pid,
 			FetchNewRecord: true,
-			PinRecord: c.pinRecords,
+			PinRecord:      c.pinRecords,
 		}
 	}()
 	return nil
@@ -346,7 +346,7 @@ func (c *Crawler) Start() error {
 						err := c.db.View(func(db *gorm.DB) error {
 							return db.Where("peer_id=?", p.PeerID).Find(&cidsRecs).Error
 						})
-						if err != nil && !errors.Is(err, gorm.ErrRecordNotFound){
+						if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 							log.Errorf("Error loading cid for dead peer %s", err)
 							continue
 						}
