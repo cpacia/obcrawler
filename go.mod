@@ -22,7 +22,7 @@ require (
 	github.com/libp2p/go-libp2p-kad-dht v0.12.2
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	google.golang.org/grpc v1.33.2
+	google.golang.org/grpc v1.53.0
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/driver/postgres v1.1.0
 	gorm.io/driver/sqlite v1.1.4
